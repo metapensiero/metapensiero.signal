@@ -5,3 +5,14 @@
 # :License:   GNU General Public License version 3 or later
 # :Copyright: Copyright (C) 2015 Alberto Berti
 #
+
+
+class SignalError(Exception):
+    pass
+
+
+from .atom import Signal
+from .user import SignalNameHandlerDecorator, handler, SignalAndHandlerInitMeta
+
+__all__ = ('SignalError', 'Signal', 'SignalNameHandlerDecorator', 'handler',
+           'SignalAndHandlerInitMeta')
