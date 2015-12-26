@@ -5,6 +5,9 @@
 # :License:   GNU General Public License version 3 or later
 #
 
+import asyncio
+import weakref
+
 from metapensiero.asyncio import transaction
 
 from .weak import MethodAwareWeakSet

@@ -44,7 +44,10 @@ setup(
     package_dir={'': 'src'},
     namespace_packages=['metapensiero',],
 
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'metapensiero.asyncio.transaction>=0.2'
+    ],
     extras_require={'dev': ['metapensiero.tool.bump_version']},
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'pytest-asyncio'],

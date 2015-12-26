@@ -83,7 +83,7 @@ class SignalAndHandlerInitMeta(type):
         base class."""
         result = []
         for name in names:
-            result.append(ChainMap({}, (getattr(base, name, {}) for base in bases)))
+            result.append(ChainMap({}, *(getattr(base, name, {}) for base in bases)))
         return result
 
     def _build_instance_handler_mapping(cls, instance, handle_d):
