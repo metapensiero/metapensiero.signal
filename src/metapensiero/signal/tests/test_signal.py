@@ -9,10 +9,8 @@ import asyncio
 
 import pytest
 from metapensiero.signal import Signal
-from metapensiero.signal  import SignalAndHandlerInitMeta, handler
+from metapensiero.signal import SignalAndHandlerInitMeta, handler
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_01_signal_with_functions():
     signal = Signal()
     called1 = False
