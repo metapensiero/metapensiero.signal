@@ -3,7 +3,9 @@
 Changes
 -------
 
-0.0 (unreleased)
+0.1 (2015-12-27)
 ~~~~~~~~~~~~~~~~
 
-- Initial effort.
+- Move here code from rocky
+- Add documentation
+- Move here tests also
