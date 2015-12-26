@@ -284,3 +284,38 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert b1.called == (2, 'b')
     assert b1.calledb == (2, 'b')
     assert a1.called == (1, 'a')
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_08_class_defined_signal_with_decorator_mixed(events):
+
+    from metapensiero.asyncio import transaction
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal()
+
+        def __init__(self):
+            self.called = False
+            self.called2 = False
+
+        @handler('click')
+        def onclick(self, arg, kw):
+            self.called = (arg, kw)
+
+        @handler('click')
+        @asyncio.coroutine
+        def click2(self, arg, kw):
+            self.called2 = (arg, kw)
+
+    a1 = A()
+
+    assert a1.called == False
+    assert a1.called2 == False
+
+    trans = transaction.begin()
+    a1.click.notify(1, kw='a')
+    assert a1.called == (1, 'a')
+    assert a1.called2 == False
+    yield from trans.end()
+    assert a1.called2 == (1, 'a')
