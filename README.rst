@@ -10,9 +10,9 @@
  metapensiero.signal
 =====================
 
- :author: Alberto Berti
- :contact: alberto@metapensiero.it
- :license: GNU General Public License version 3 or later
+:author: Alberto Berti
+:contact: alberto@metapensiero.it
+:license: GNU General Public License version 3 or later
 
 An event framework that is asyncio aware
 ========================================
@@ -117,7 +117,7 @@ This id exactly where the sister package
 works with it to ensure that two coroutines (the one calling
 ``notify()`` and ``handler1()``) can be synchronized.
 
-To do that the *external* code has just to start a  *transaction* and
+To do that the *outer* code has just to start a  *transaction* and
 if it is in place, the ``Signal`` class' code will automatically add
 any async envent handler to it.
 
@@ -196,9 +196,107 @@ Or, with python 3.5, we can use async context managers, so it becomes:
 __ https://pypi.python.org/pypi/metapensiero.asyncio.transaction
 
 This way the calling context has a generic and scalable way of
-synchronize the block of code that runs notify with the side effects,
-wvwn when they are async and their number is unknown.
+synchronize the block of code that runs ``notify()`` with the side effects,
+even when they are async and their number is unknown.
 
+A ``Signal`` instance class can also be used as a member of a
+class. When this is the case a decorator is provided to declare
+class-level handlers. To let this feature work, the user class has to
+have a specific metaclass:
+
+.. code:: python
+
+  from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
+
+  class A(metaclass=SignalAndHandlerInitMeta):
+
+      click = Signal()
+
+      def __init__(self):
+          self.called = False
+
+      @handler('click')
+      def onclick(self, arg, kw):
+          self.called = (arg, kw)
+
+  a1 = A()
+  assert a1.called == False
+  a1.click.notify(1, kw='a')
+  assert a1.called == (1, 'a')
+
+Of course a class-level handler can be async:
+
+.. code:: python
+
+  import asyncio
+
+  from metapensiero.asyncio import transaction
+  from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
+
+  class A(metaclass=SignalAndHandlerInitMeta):
+
+      click = Signal()
+
+      def __init__(self):
+          self.called = False
+          self.called2 = False
+
+      @handler('click')
+      def onclick(self, arg, kw):
+          self.called = (arg, kw)
+
+      @handler('click')
+      @asyncio.coroutine
+      def click2(self, arg, kw):
+          self.called2 = (arg, kw)
+
+  a1 = A()
+
+  @asyncio.coroutine
+  def runner():
+      assert a1.called == False
+      assert a1.called2 == False
+
+      trans = transaction.begin()
+      a1.click.notify(1, kw='a')
+      assert a1.called == (1, 'a')
+      assert a1.called2 == False
+      yield from trans.end()
+      assert a1.called2 == (1, 'a')
+
+  loop = asyncio.get_event_loop()
+  loop.run_until_complete(runner())
+
+Of course, you can use the ``Signal`` class without user class
+instrumentation, but you will have to do per-instance subscriptions by
+yourself:
+
+.. code:: python
+
+  class B:
+
+      # the name here is needed for classes that don't explicitly support
+      # signals
+      click = Signal('click')
+
+      def __init__(self):
+          self.called = False
+          self.click.connect(self.onclick)
+
+      def onclick(self, arg, kw):
+          self.called = (arg, kw)
+
+  b = B()
+  assert b.called == False
+  b.onclick.notify(1, kw='b')
+  assert b.called == (1, 'b')
+
+Testing
++++++++
+
+To run the tests you should run the following at the package root::
+
+  python setup.py test
 
 
 Build status
