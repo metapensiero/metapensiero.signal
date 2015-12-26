@@ -46,7 +46,7 @@ setup(
 
     install_requires=[
         'setuptools',
-        'metapensiero.asyncio.transaction>=0.2'
+        'metapensiero.asyncio.transaction>=0.3'
     ],
     extras_require={'dev': ['metapensiero.tool.bump_version']},
     setup_requires=['pytest-runner'],
