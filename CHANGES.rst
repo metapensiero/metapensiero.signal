@@ -9,3 +9,8 @@ Changes
 - Move here code from rocky
 - Add documentation
 - Move here tests also
+
+0.2 (2015-12-27)
+~~~~~~~~~~~~~~~~
+
+- Documentation fixes
