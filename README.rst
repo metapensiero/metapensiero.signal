@@ -24,6 +24,13 @@ This package implements a light event system that is able to deal with
 both synchronous and asynchronous event handlers. It can be used as-is
 or as member of a class.
 
+Installation
+++++++++++++
+
+To install the package execute the following command::
+
+  $ pip install metapensiero.signal
+
 Usage
 +++++
 
