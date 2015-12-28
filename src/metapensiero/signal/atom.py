@@ -11,11 +11,16 @@ import weakref
 from metapensiero.asyncio import transaction
 
 from .weak import MethodAwareWeakSet
+from . import ExternalSignaller
+from . import SignalAndHandlerInitMeta
 
 
 class Signal:
     """ The atom of event handling
     """
+    _external_signaller = None
+    _name = None
+
 
     class InstanceProxy:
         """A small proxy used to get instance context when signal is a
@@ -55,11 +60,34 @@ class Signal:
                                       loop=loop,
                                       **kwargs)
 
-    def __init__(self, name=None, loop=None):
+    def __init__(self, name=None, loop=None, external=None):
         self.name = name
         self.subscribers = MethodAwareWeakSet()
         self.loop = loop or asyncio.get_event_loop()
         self.instance_subscribers = weakref.WeakKeyDictionary()
+        self.external_signaller = external
+
+    @property
+    def external_signaller(self):
+        return self._external_signaller
+
+    @external_signaller.setter
+    def external_signaller(self, value):
+        if value:
+            assert isinstance(value, ExternalSignaller)
+        self._external_signaller = value
+        if self._name and value:
+            value.register(self, self._name)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+        if value and self._external_signaller:
+            self._external_signaller.register(self, value)
 
     def connect(self, cback, subscribers=None):
         """Add  a function or a method as an handler of this signal.
@@ -108,17 +136,23 @@ class Signal:
                 logger.exception('Error in notify')
         loop = loop or self.loop
         # maybe do a round of external publishing
-        if instance:
-            ext_res = self.ext_publish(instance, args, ext_kwargs)
-            if asyncio.iscoroutine(ext_res):
-                coros.append(ext_res)
+        ext_res = self.ext_publish(instance, loop, args, kwargs)
+        if asyncio.iscoroutine(ext_res):
+            coros.append(ext_res)
         trans = transaction.get(None)
         all_co = asyncio.gather(*coros, loop=loop)
         if trans: trans.add(all_co)
         results.append(all_co)
         return results
 
+    def ext_publish(self, instance, loop, args, kwargs):
+        """If 'external_signaller' is defined, calls it's publish method to
+        notify external event systems.
+        """
+        if self.external_signaller:
             # Assume that the loop is manages by the external handler
+            return self.external_signaller.publish(self, instance, loop,
+                                                   args, kwargs)
 
     def __get__(self, instance, cls=None):
         if instance:

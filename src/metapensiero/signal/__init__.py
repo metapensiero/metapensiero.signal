@@ -11,8 +11,10 @@ class SignalError(Exception):
     pass
 
 
-from .atom import Signal
+from .external import ExternalSignaller, ExternalSignallerAndHandler
 from .user import SignalNameHandlerDecorator, handler, SignalAndHandlerInitMeta
+from .atom import Signal
 
 __all__ = ('SignalError', 'Signal', 'SignalNameHandlerDecorator', 'handler',
-           'SignalAndHandlerInitMeta')
+           'SignalAndHandlerInitMeta', 'ExternalSignaller',
+           'ExternalSignallerAndHandler')
