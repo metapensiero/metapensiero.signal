@@ -7,7 +7,7 @@
 
 from collections import ChainMap
 
-from .atom import Signal
+from .external import ExternalSignallerAndHandler
 from . import SignalError
 
 SPEC_CONTAINER_MEMBER_NAME = '_publish'
@@ -42,27 +42,45 @@ class SignalAndHandlerInitMeta(type):
     """A metaclass for registering signals and handlers"""
 
     _is_handler = SignalNameHandlerDecorator.is_handler
+    _external_signaller_and_handler = None
 
     def __init__(cls, name, bases, namespace):
         super().__init__(name, bases, namespace)
         # collect signals and handlers from the bases, overwriting them from
         # right to left
+        signaller = cls._external_signaller_and_handler
         signals, handlers = cls._build_inheritation_chain(bases, '_signals',
                                                           '_signal_handlers')
-        cls._find_local_signals(signals, handlers, namespace)
+        cls._find_local_signals(signals, namespace)
+        cls._find_local_handlers(handlers, namespace)
+        if signaller:
+            signaller.register_class(cls, namespace, signals, handlers)
         cls._subscribe_local_handlers(signals, handlers, namespace)
         cls._signals = signals
         cls._signal_handlers = handlers
 
-    def _find_local_signals(cls, signals, handlers, namespace):
-        """Add name info to every "local" signal and add it to the mapping.
-        Also complete signal initialization as member of the class by
-        injecting its name.
+    def _find_local_signals(cls, signals,  namespace):
+        """Add name info to every "local" (present in the body of this class)
+        signal and add it to the mapping.  Also complete signal
+        initialization as member of the class by injecting its name.
         """
+        from . import Signal
+        signaller = cls._external_signaller_and_handler
         for aname, avalue in namespace.items():
             if isinstance(avalue, Signal):
                 avalue.name = aname
+                if signaller:
+                    avalue.external_signaller = signaller
                 signals[aname] = avalue
+
+    def _find_local_handlers(cls, handlers,  namespace):
+        """Add name info to every "local" (present in the body of this class)
+        handler and add it to the mapping.
+        """
+        for aname, avalue in namespace.items():
+            sig_name = cls._is_handler(aname, avalue)
+            if sig_name:
+                handlers[aname] = sig_name
 
     def _subscribe_local_handlers(cls, signals, handlers, namespace):
         """For every marked handler, see if there is a suitable signal and
@@ -106,3 +124,9 @@ class SignalAndHandlerInitMeta(type):
             cls._signal_handlers
         )
         return isignals, ihandlers
+
+    @classmethod
+    def with_external(mclass, external, name=None):
+        assert isinstance(external, ExternalSignallerAndHandler)
+        name = name or "ExternalSignalAndHandlerInitMeta"
+        return type(name, (mclass,), {'_external_signaller_and_handler': external})
