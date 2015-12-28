@@ -60,7 +60,6 @@ class Signal:
         self.subscribers = MethodAwareWeakSet()
         self.loop = loop or asyncio.get_event_loop()
         self.instance_subscribers = weakref.WeakKeyDictionary()
-        self.external_publishers = weakref.WeakKeyDictionary()
 
     def connect(self, cback, subscribers=None):
         """Add  a function or a method as an handler of this signal.
@@ -91,19 +90,11 @@ class Signal:
         if subscribers is None:
             subscribers = self.subscribers
         subscribers = set(subscribers)
-        if instance and self.name and hasattr(instance.__class__,
-                                              '_signal_handlers'):
+        if instance and self.name and isinstance(instance.__class__,
+                                                 SignalAndHandlerInitMeta):
             # merge the set of instance-only handlers with those declared
             # in the main class body and marked with @handler
             subscribers |= self._get_class_handlers(instance)
-
-        # pop the kwargs prefixed with 'local_'
-        # TODO: test this
-        loc_kwargs = {k[6:]: v for k, v in kwargs.items()
-                      if k.startswith('local_')}
-        ext_kwargs = {k: v for k, v in kwargs.items()
-                      if not k.startswith('local_')}
-        loc_kwargs.update(ext_kwargs)
         coros = []
         results = []
         for method in subscribers:
@@ -127,11 +118,7 @@ class Signal:
         results.append(all_co)
         return results
 
-    def ext_publish(self, instance, args, kwargs):
-        publish_func = self.external_publishers.get(instance)
-        if publish_func:
             # Assume that the loop is manages by the external handler
-            return publish_func(*args, **kwargs)
 
     def __get__(self, instance, cls=None):
         if instance:
@@ -147,6 +134,3 @@ class Signal:
         handlers = cls._signal_handlers
         return set(getattr(instance, hname) for hname, sig_name in
                    handlers.items() if sig_name == self.name)
-
-    def register_instance_publisher(self, instance, func):
-        self.external_publishers[instance] = func
