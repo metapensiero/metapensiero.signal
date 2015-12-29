@@ -319,3 +319,73 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
     assert a1.called2 == False
     yield from trans.end()
     assert a1.called2 == (1, 'a')
+
+
+def test_09_external_signaller():
+
+    import asyncio
+    from metapensiero.signal import ExternalSignaller
+
+    publish_called = False
+    register_called = False
+
+    @ExternalSignaller.register
+    class MyExternalSignaller:
+
+        def publish(self, signal, instance, loop, args, kwargs):
+            nonlocal publish_called
+            publish_called = (signal, instance, loop, args, kwargs)
+
+        def register_signal(self, signal, name):
+            nonlocal register_called
+            register_called = (signal, name)
+
+    assert publish_called == False
+    assert register_called == False
+
+    signaller = MyExternalSignaller()
+    signal = Signal(name='foo', external=signaller)
+
+    assert register_called == (signal, 'foo')
+    assert publish_called == False
+
+    signal.notify('foo', zoo='bar')
+    assert publish_called == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
+    assert register_called == (signal, 'foo')
+
+@pytest.mark.asyncio
+@asyncio.coroutine
+def test_10_external_signaller_async(events):
+
+    from metapensiero.signal import ExternalSignaller
+
+    publish_called = False
+    register_called = False
+
+    @ExternalSignaller.register
+    class MyExternalSignaller:
+
+        @asyncio.coroutine
+        def publish(self, signal, instance, loop, args, kwargs):
+            nonlocal publish_called
+            publish_called = (signal, instance, loop, args, kwargs)
+            events.publish.set()
+
+        def register_signal(self, signal, name):
+            nonlocal register_called
+            register_called = (signal, name)
+
+    assert publish_called == False
+    assert register_called == False
+
+    signaller = MyExternalSignaller()
+    signal = Signal(name='foo', external=signaller)
+
+    assert register_called == (signal, 'foo')
+    assert publish_called == False
+
+    signal.notify('foo', zoo='bar')
+    assert publish_called == False
+    yield from events.publish.wait()
+    assert publish_called == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
+    assert register_called == (signal, 'foo')
