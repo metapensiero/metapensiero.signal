@@ -77,7 +77,7 @@ class Signal:
             assert isinstance(value, ExternalSignaller)
         self._external_signaller = value
         if self._name and value:
-            value.register(self, self._name)
+            value.register_signal(self, self._name)
 
     @property
     def name(self):
@@ -87,7 +87,7 @@ class Signal:
     def name(self, value):
         self._name = value
         if value and self._external_signaller:
-            self._external_signaller.register(self, value)
+            self._external_signaller.register_signal(self, value)
 
     def connect(self, cback, subscribers=None):
         """Add  a function or a method as an handler of this signal.

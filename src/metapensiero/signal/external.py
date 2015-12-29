@@ -21,7 +21,7 @@ class ExternalSignaller(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def register(self, signal, name):
+    def register_signal(self, signal, name):
         """Register a signal with its name"""
         pass
 
