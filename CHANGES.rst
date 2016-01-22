@@ -14,3 +14,8 @@ Changes
 ~~~~~~~~~~~~~~~~
 
 - Documentation fixes
+
+0.3 (2016-01-22)
+~~~~~~~~~~~~~~~~
+
+- Python 2.7 compatibility for the sync handling
