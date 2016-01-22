@@ -24,6 +24,11 @@ This package implements a light event system that is able to deal with
 both synchronous and asynchronous event handlers. It can be used as-is
 or as member of a class.
 
+If you use it on Python 2.7 you'll get just synchronous handlers
+management, but there is a way to bind it to external event systems in
+a generic way. Check out the ``external.py`` submodule and the tests
+for more info.
+
 Installation
 ++++++++++++
 
