@@ -164,8 +164,8 @@ def test_05_class_defined_signal(events):
     if six.PY3:
         events.define('h1')
 
-    assert a1.called == False
-    assert a2.called == False
+    assert a1.called is False
+    assert a2.called is False
 
     assert isinstance(a1.click, Signal.InstanceProxy)
 
@@ -179,7 +179,7 @@ def test_05_class_defined_signal(events):
     assert a1.called == (1, 'a')
 
     assert c['called1'] == (1, 'a')
-    assert a2.called == False
+    assert a2.called is False
 
     a2.click.notify(2, kw='b')
 
@@ -220,7 +220,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     a1 = A('a1')
 
-    assert a1.called == False
+    assert a1.called is False
 
     assert isinstance(a1.click, Signal.InstanceProxy)
 
@@ -253,8 +253,8 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     b1 = B('b1')
 
-    assert b1.called == False
-    assert b1.calledb == False
+    assert b1.called is False
+    assert b1.calledb is False
 
     res = a1.click.notify(1, kw='a')
     if six.PY3:
@@ -263,8 +263,8 @@ def test_07_class_defined_signal_with_decorator_named(events):
         events.loop.run_until_complete(events.a_a1.wait())
     assert len(res) == 1
 
-    assert b1.called == False
-    assert b1.calledb == False
+    assert b1.called is False
+    assert b1.calledb is False
 
     res = b1.click.notify(2, kw='b')
     if six.PY3:
@@ -291,8 +291,8 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     c1 = C('c1')
 
-    assert c1.called == False
-    assert c1.calledb == False
+    assert c1.called is False
+    assert c1.calledb is False
 
     res = c1.click.notify(3, kw='c')
     if six.PY3:
@@ -333,14 +333,14 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
 
     a1 = A()
 
-    assert a1.called == False
-    assert a1.called2 == False
+    assert a1.called is False
+    assert a1.called2 is False
 
     if six.PY3:
         trans = transaction.begin()
     a1.click.notify(1, kw='a')
     assert a1.called == (1, 'a')
-    assert a1.called2 == False
+    assert a1.called2 is False
     if six.PY3:
         events.loop.run_until_complete(trans.end())
     assert a1.called2 == (1, 'a')
@@ -354,7 +354,6 @@ def test_09_external_signaller():
 
     c = dict(publish_called=False, register_called=False)
 
-    @ExternalSignaller.register
     class MyExternalSignaller(object):
 
         def publish(self, signal, instance, loop, args, kwargs):
@@ -363,14 +362,16 @@ def test_09_external_signaller():
         def register_signal(self, signal, name):
             c['register_called'] = (signal, name)
 
-    assert c['register_called'] == False
-    assert c['publish_called'] == False
+    ExternalSignaller.register(MyExternalSignaller)
+
+    assert c['register_called'] is False
+    assert c['publish_called'] is False
 
     signaller = MyExternalSignaller()
     signal = Signal(name='foo', external=signaller)
 
     assert c['register_called'] == (signal, 'foo')
-    assert c['publish_called'] == False
+    assert c['publish_called'] is False
 
     signal.notify('foo', zoo='bar')
     if six.PY3:
@@ -385,7 +386,6 @@ def test_10_external_signaller_async(events):
 
     c = dict(publish_called=False, register_called=False)
 
-    @ExternalSignaller.register
     class MyExternalSignaller(object):
 
         @_coroutine
@@ -397,17 +397,19 @@ def test_10_external_signaller_async(events):
         def register_signal(self, signal, name):
             c['register_called'] = (signal, name)
 
-    assert c['register_called'] == False
-    assert c['publish_called'] == False
+    ExternalSignaller.register(MyExternalSignaller)
+
+    assert c['register_called'] is False
+    assert c['publish_called'] is False
 
     signaller = MyExternalSignaller()
     signal = Signal(name='foo', external=signaller)
 
     assert c['register_called'] == (signal, 'foo')
-    assert c['publish_called'] == False
+    assert c['publish_called'] is False
 
     signal.notify('foo', zoo='bar')
-    assert c['publish_called'] == False
+    assert c['publish_called'] is False
     if six.PY3:
         events.loop.run_until_complete(events.publish.wait())
         assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})

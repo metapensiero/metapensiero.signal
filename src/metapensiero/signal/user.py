@@ -52,7 +52,7 @@ class SignalAndHandlerInitMeta(type):
     _external_signaller_and_handler = None
 
     def __init__(cls, name, bases, namespace):
-        super().__init__(name, bases, namespace)
+        super(SignalAndHandlerInitMeta, cls).__init__(name, bases, namespace)
         # collect signals and handlers from the bases, overwriting them from
         # right to left
         signaller = cls._external_signaller_and_handler

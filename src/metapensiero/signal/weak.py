@@ -7,8 +7,16 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import six
+
 import inspect
 import weakref
+
+if six.PY3:
+    WeakMethod = weakref.WeakMethod
+else:
+    import weakrefmethod
+    WeakMethod = weakrefmethod.WeakMethod
 
 
 class MethodAwareWeakSet(weakref.WeakSet):
@@ -22,7 +30,7 @@ class MethodAwareWeakSet(weakref.WeakSet):
         if self._pending_removals:
             self._commit_removals()
         if inspect.ismethod(item):
-            ref = weakref.WeakMethod
+            ref = WeakMethod
         else:
             ref = weakref.ref
         self.data.add(ref(item, self._remove))

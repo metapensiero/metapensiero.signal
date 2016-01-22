@@ -29,7 +29,8 @@ INSTALL_REQUIRES = [
 
 if PY3:
     INSTALL_REQUIRES.append('metapensiero.asyncio.transaction>=0.5')
-
+else:
+    INSTALL_REQUIRES.append('weakrefmethod')
 
 setup(
     name="metapensiero.signal",
