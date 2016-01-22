@@ -238,7 +238,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
     class B(A):
 
         def __init__(self, name):
-            super().__init__(name)
+            super(B, self).__init__(name)
             self.calledb = False
             if six.PY3:
                 self.b_ev = events['b_' + name]
