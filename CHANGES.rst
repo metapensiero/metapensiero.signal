@@ -26,3 +26,8 @@ Changes
 
 - Allow notify(), connect() and disconnect() costomization via wrapper
   functions and decorators
+
+0.5 (2016-01-22)
+~~~~~~~~~~~~~~~~
+
+- make PyPI happy

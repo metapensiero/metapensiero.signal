@@ -20,7 +20,7 @@ An event framework that is asyncio aware
 .. contents::
 
 Goal
-++++
+----
 
 This package implements a light event system that is able to deal with
 both synchronous and asynchronous event handlers. It can be used as-is
@@ -32,17 +32,17 @@ a generic way. Check out the ``external.py`` submodule and the tests
 for more info.
 
 Installation
-++++++++++++
+------------
 
 To install the package execute the following command::
 
   $ pip install metapensiero.signal
 
 Usage
-+++++
+-----
 
 Basic functionality
-```````````````````
+~~~~~~~~~~~~~~~~~~~
 
 The most significant component provided by this package is the class
 ``Signal``:
@@ -80,7 +80,7 @@ As you can see above, the way to fire an event is by calling the
 that function will be added to the handlers call.
 
 Asynchronous signal handlers
-````````````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Not only you can have synchronous handlers, but you can have
 asynchronous handlers as well:
@@ -133,7 +133,7 @@ the actual amount of async handlers isn't known in advance, what
 should we do?
 
 Transaction support
-```````````````````
+~~~~~~~~~~~~~~~~~~~
 
 This is exactly where the sister package
 `metapensiero.asyncio.transaction`__ comes handy. The ``Signal`` class
@@ -223,7 +223,7 @@ synchronize the block of code that runs ``notify()`` with the side effects,
 even when they are async and their number is unknown.
 
 Use signals with classes
-````````````````````````
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 A ``Signal`` instance class can also be used as a member of a
 class. When this is the case a decorator is provided to declare
@@ -318,7 +318,7 @@ yourself:
   assert b.called == (1, 'b')
 
 Extensibility
-`````````````
+~~~~~~~~~~~~~
 
 Signals support two way to extend their functionality. The first is
 global and is intended as a way to plug in signals into other event
@@ -405,7 +405,7 @@ behaviors, you can modify arguments, return customized values or even
 avoid triggering the default behavior.
 
 Testing
-+++++++
+-------
 
 To run the tests you should run the following at the package root::
 
@@ -413,7 +413,7 @@ To run the tests you should run the following at the package root::
 
 
 Build status
-++++++++++++
+------------
 
 .. image:: https://travis-ci.org/azazel75/metapensiero.signal.svg?branch=master
     :target: https://travis-ci.org/azazel75/metapensiero.signal
