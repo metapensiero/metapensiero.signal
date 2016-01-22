@@ -17,9 +17,7 @@
 An event framework that is asyncio aware
 ========================================
 
-.. sidebar::
-
-   .. contents::
+.. contents::
 
 Goal
 ++++
