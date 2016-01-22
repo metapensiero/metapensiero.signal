@@ -10,12 +10,16 @@
  metapensiero.signal
 =====================
 
-:author: Alberto Berti
-:contact: alberto@metapensiero.it
-:license: GNU General Public License version 3 or later
+ :author: Alberto Berti
+ :contact: alberto@metapensiero.it
+ :license: GNU General Public License version 3 or later
 
 An event framework that is asyncio aware
 ========================================
+
+.. sidebar::
+
+   .. contents::
 
 Goal
 ++++
@@ -38,6 +42,9 @@ To install the package execute the following command::
 
 Usage
 +++++
+
+Basic functionality
+```````````````````
 
 The most significant component provided by this package is the class
 ``Signal``:
@@ -73,6 +80,9 @@ method.
 As you can see above, the way to fire an event is by calling the
 ``notify()`` method and any argument or keyword argument passed to
 that function will be added to the handlers call.
+
+Asynchronous signal handlers
+````````````````````````````
 
 Not only you can have synchronous handlers, but you can have
 asynchronous handlers as well:
@@ -124,14 +134,17 @@ instance for all of them and then wait for everyone of those? And if
 the actual amount of async handlers isn't known in advance, what
 should we do?
 
-This id exactly where the sister package
+Transaction support
+```````````````````
+
+This is exactly where the sister package
 `metapensiero.asyncio.transaction`__ comes handy. The ``Signal`` class
 works with it to ensure that two coroutines (the one calling
 ``notify()`` and ``handler1()``) can be synchronized.
 
 To do that the *outer* code has just to start a  *transaction* and
 if it is in place, the ``Signal`` class' code will automatically add
-any async envent handler to it.
+any async event handler to it.
 
 To summarize this feature the previous example can be written also
 as:
@@ -210,6 +223,9 @@ __ https://pypi.python.org/pypi/metapensiero.asyncio.transaction
 This way the calling context has a generic and scalable way of
 synchronize the block of code that runs ``notify()`` with the side effects,
 even when they are async and their number is unknown.
+
+Use signals with classes
+````````````````````````
 
 A ``Signal`` instance class can also be used as a member of a
 class. When this is the case a decorator is provided to declare
