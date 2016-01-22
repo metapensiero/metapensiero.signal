@@ -340,8 +340,8 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
         trans = transaction.begin()
     a1.click.notify(1, kw='a')
     assert a1.called == (1, 'a')
-    assert a1.called2 is False
     if six.PY3:
+        assert a1.called2 is False
         events.loop.run_until_complete(trans.end())
     assert a1.called2 == (1, 'a')
 
@@ -409,8 +409,8 @@ def test_10_external_signaller_async(events):
     assert c['publish_called'] is False
 
     signal.notify('foo', zoo='bar')
-    assert c['publish_called'] is False
     if six.PY3:
+        assert c['publish_called'] is False
         events.loop.run_until_complete(events.publish.wait())
         assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
     else:
