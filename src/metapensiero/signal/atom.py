@@ -58,12 +58,14 @@ class Signal(object):
         def connect(self, cback):
             "See signal"
             return self.signal.connect(cback,
-                                       subscribers=self.subscribers)
+                                       subscribers=self.subscribers,
+                                       instance=self.instance)
 
         def disconnect(self, cback):
             "See signal"
             return self.signal.disconnect(cback,
-                                          subscribers=self.subscribers)
+                                          subscribers=self.subscribers,
+                                          instance=self.instance)
 
         def notify(self, *args, **kwargs):
             "See signal"
@@ -74,7 +76,8 @@ class Signal(object):
                                       loop=loop,
                                       **kwargs)
 
-    def __init__(self, name=None, loop=None, external=None):
+    def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
+                 loop=None, external=None):
         self.name = name
         self.subscribers = MethodAwareWeakSet()
         if six.PY3:
@@ -83,6 +86,9 @@ class Signal(object):
             self.loop = None
         self.instance_subscribers = weakref.WeakKeyDictionary()
         self.external_signaller = external
+        self._fnotify = fnotify
+        self._fconnect = fconnect
+        self._fdisconnect = fdisconnect
 
     @property
     def external_signaller(self):
@@ -106,35 +112,63 @@ class Signal(object):
         if value and self._external_signaller:
             self._external_signaller.register_signal(self, value)
 
-    def connect(self, cback, subscribers=None):
+    def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
         Every handler added should be a coroutine.
         """
         if subscribers is None:
             subscribers = self.subscribers
+        # wrapper
+        if self._fconnect:
+            def _connect(cback):
+                self._connect(subscribers, cback)
+            if instance:
+                result = self._fconnect(instance, cback, subscribers, _connect)
+            else:
+                result = self._fconnect(cback, subscribers, _connect)
+        else:
+            self._connect(subscribers, cback)
+            result = None
+        return result
+
+    def _connect(self, subscribers, cback):
         subscribers.add(cback)
 
-    def disconnect(self, cback, subscribers=None):
+    def disconnect(self, cback, subscribers=None, instance=None):
         """Remove a previously added function or method from the set of the
         signal's handlers.
         """
         if subscribers is None:
             subscribers = self.subscribers
-        subscribers.remove(cback)
+        # wrapper
+        if self._fdisconnect:
+            def _disconnect(cback):
+                self._disconnect(subscribers, cback)
+            if instance:
+                result = self._fdisconnect(instance, cback, subscribers,
+                                           _disconnect)
+            else:
+                result = self._fdisconnect(cback, subscribers, _disconnect)
+        else:
+            self._disconnect(subscribers, cback)
+            result = None
+        return result
+
+    def _disconnect(self, subscribers, cback):
+        if cback in subscribers:
+            subscribers.remove(cback)
 
     def notify(self, *args, **kwargs):
-        """Call all the registered handlers with the arguments passed.
-        If this signal is a class member, call also the handlers registered
-        at class-definition time. If an external publish function is
-        supplied, call it with the provided arguments at the end.
-
-        Returns a list with the results from the handlers execution.
+        """Call all the registered handlers with the arguments passed. If a
+        notify wrapper is defined it is called with a notify callback
+        to really start the notification and a set of the registered
+        class-defined and per-instance subscribers.
         """
-        # if i'm not called from an instance, use the default
-        # subscribers
         subscribers = kwargs.pop('subscribers', None)
         instance = kwargs.pop('instance', None)
         loop = kwargs.pop('loop', None)
+        # if i'm not called from an instance, use the default
+        # subscribers
         if subscribers is None:
             subscribers = self.subscribers
         subscribers = set(subscribers)
@@ -143,6 +177,25 @@ class Signal(object):
             # merge the set of instance-only handlers with those declared
             # in the main class body and marked with @handler
             subscribers |= self._get_class_handlers(instance)
+        if self._fnotify:
+            def cback(*args, **kwargs):
+                return self._notify(subscribers, instance, loop, *args, **kwargs)
+            if instance:
+                result = self._fnotify(instance, subscribers, cback, *args, **kwargs)
+            else:
+                result = self._fnotify(subscribers, cback, *args, **kwargs)
+        else:
+            result = self._notify(subscribers, instance, loop, *args, **kwargs)
+        return result
+
+    def _notify(self, subscribers, instance, loop, *args, **kwargs):
+        """Call all the registered handlers with the arguments passed.
+        If this signal is a class member, call also the handlers registered
+        at class-definition time. If an external publish function is
+        supplied, call it with the provided arguments at the end.
+
+        Returns a list with the results from the handlers execution.
+        """
         coros = []
         results = []
         for method in subscribers:
@@ -190,7 +243,18 @@ class Signal(object):
     def _get_class_handlers(self, instance):
         """Returns the handlers registered at class level.
         """
+        # TODO: Move this to SignalAndHandlerInitMeta
         cls = instance.__class__
         handlers = cls._signal_handlers
         return set(getattr(instance, hname) for hname, sig_name in
                    six.iteritems(handlers) if sig_name == self.name)
+
+    def on_connect(self, fconnect):
+        "On connect optional wrapper decorator"
+        self._fconnect = fconnect
+        return self
+
+    def on_disconnect(self, fdisconnect):
+        "On disconnect optional wrapper decorator"
+        self._fdisconnect = fdisconnect
+        return self

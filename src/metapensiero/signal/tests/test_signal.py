@@ -47,6 +47,7 @@ def test_01_signal_with_functions():
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
 
+
 def test_02_signal_with_async_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
@@ -76,6 +77,7 @@ def test_02_signal_with_async_functions(events):
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
 
+
 def test_03_signal_with_mixed_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
@@ -101,6 +103,7 @@ def test_03_signal_with_mixed_functions(events):
     if six.PY3:
         events.loop.run_until_complete(events.wait())
     assert c['called1'] == (1, 'a')
+
 
 def test_04_signal_with_methods(events):
     signal = Signal()
@@ -132,12 +135,13 @@ def test_04_signal_with_methods(events):
     assert a1.called == (1, 'a')
     assert a2.called == (1, 'a')
 
+
 def test_05_class_defined_signal(events):
     class A(object):
 
         # the name here is needed for classes that don't explicitly support
         # signals
-        click = Signal('click')
+        click = Signal(name='click')
 
         def __init__(self, name):
             self.called = False
@@ -198,6 +202,7 @@ def test_signal_06_init_mclass():
         click = Signal()
 
     assert A.click.name == 'click'
+
 
 def test_07_class_defined_signal_with_decorator_named(events):
     @six.add_metaclass(SignalAndHandlerInitMeta)
@@ -299,14 +304,13 @@ def test_07_class_defined_signal_with_decorator_named(events):
         events.loop.run_until_complete(events.a_c1.wait())
         events.loop.run_until_complete(events.b_c1.wait())
 
-    #assert len(res) == 2
-
     assert c1.called == (3, 'c')
     assert c1.calledb == (3, 'c')
 
     assert b1.called == (2, 'b')
     assert b1.calledb == (2, 'b')
     assert a1.called == (1, 'a')
+
 
 def test_08_class_defined_signal_with_decorator_mixed(events):
 
@@ -380,6 +384,7 @@ def test_09_external_signaller():
         assert c['publish_called'] == (signal, None, None, ('foo',), {'zoo': 'bar'})
     assert c['register_called'] == (signal, 'foo')
 
+
 def test_10_external_signaller_async(events):
 
     from metapensiero.signal import ExternalSignaller
@@ -416,3 +421,186 @@ def test_10_external_signaller_async(events):
     else:
         assert c['publish_called'] == (signal, None, None, ('foo',), {'zoo': 'bar'})
     assert c['register_called'] == (signal, 'foo')
+
+
+def test_11_notify_wrapper():
+
+    c = dict(called=0, wrap_args=None, handler_called=0, handler_args=None)
+
+    @Signal
+    def asignal(subscribers, notify, *args, **kwargs):
+        c['called'] += 1
+        c['wrap_args'] = (args, kwargs)
+        assert len(subscribers) == 1
+        notify('foo', k=2)
+        return 'foo'
+
+    def handler(*args, **kwargs):
+        c['handler_called'] += 1
+        c['handler_args'] = (args, kwargs)
+
+    asignal.connect(handler)
+    res = asignal.notify('bar', k=1)
+    assert res == 'foo'
+    assert c['called'] == 1
+    assert c['wrap_args'] == (('bar',), {'k': 1})
+    assert c['handler_called'] == 1
+    assert c['handler_args'] == (('foo',), {'k': 2})
+
+    c = dict(called=0, wrap_args=None, handler_called=0, handler_args=None,
+             handler2_called=0, handler2_args=None)
+
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
+
+        @Signal
+        def click(self, subscribers, notify, *args, **kwargs):
+            c['called'] += 1
+            c['wrap_args'] = (args, kwargs)
+            assert len(subscribers) == 2
+            assert isinstance(self, A)
+            notify('foo', k=2)
+            return 'foo'
+
+        @handler('click')
+        def handler(self, *args, **kwargs):
+            c['handler_called'] += 1
+            c['handler_args'] = (args, kwargs)
+
+    a = A()
+
+    def handler2(*args, **kwargs):
+        c['handler2_called'] += 1
+        c['handler2_args'] = (args, kwargs)
+
+    a.click.connect(handler2)
+    res = a.click.notify('bar', k=1)
+    assert res == 'foo'
+    assert c['called'] == 1
+    assert c['wrap_args'] == (('bar',), {'k': 1})
+    assert c['handler_called'] == 1
+    assert c['handler_args'] == (('foo',), {'k': 2})
+    assert c['handler2_called'] == 1
+    assert c['handler2_args'] == (('foo',), {'k': 2})
+
+
+def test_12_connect_wrapper():
+
+    c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None)
+
+    asignal = Signal()
+
+    @asignal.on_connect
+    def asignal(handler, subscribers, connect):
+        c['called'] += 1
+        c['connect_handler'] = handler
+        assert len(subscribers) == 0
+        connect(handler)
+        return 'foo'
+
+    def handler(*args, **kwargs):
+        c['handler_called'] += 1
+        c['handler_args'] = (args, kwargs)
+
+    res = asignal.connect(handler)
+    asignal.notify('bar', k=1)
+
+    assert res == 'foo'
+    assert c['called'] == 1
+    assert c['connect_handler'] == handler
+    assert c['handler_called'] == 1
+    assert c['handler_args'] == (('bar',), {'k': 1})
+
+    c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None,
+             handler2_called=0, handler2_args=None)
+
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
+
+        click = Signal()
+
+        @click.on_connect
+        def click(self, handler, subscribers, connect):
+            c['called'] += 1
+            c['connect_handler'] = handler
+            assert len(subscribers) == 0
+            connect(handler)
+            return 'foo'
+
+        @handler('click')
+        def handler(self, *args, **kwargs):
+            c['handler_called'] += 1
+            c['handler_args'] = (args, kwargs)
+
+    a = A()
+
+    def handler2(*args, **kwargs):
+        c['handler2_called'] += 1
+        c['handler2_args'] = (args, kwargs)
+
+    res = a.click.connect(handler2)
+    a.click.notify('bar', k=1)
+    assert res == 'foo'
+    assert c['called'] == 1
+    assert c['handler_called'] == 1
+    assert c['connect_handler'] == handler2
+    assert c['handler_args'] == (('bar',), {'k': 1})
+    assert c['handler2_called'] == 1
+    assert c['handler2_args'] == (('bar',), {'k': 1})
+
+
+def test_13_disconnect_wrapper():
+
+    c = dict(called=0, disconnnect_handler=None)
+
+    asignal = Signal()
+
+    @asignal.on_disconnect
+    def asignal(handler, subscribers, disconnect):
+        c['called'] += 1
+        c['disconnect_handler'] = handler
+        assert len(subscribers) == 1
+        disconnect(handler)
+        return 'foo'
+
+    def handler(*args, **kwargs):
+        pass
+
+    asignal.connect(handler)
+    res = asignal.disconnect(handler)
+
+    assert res == 'foo'
+    assert c['called'] == 1
+    assert c['disconnect_handler'] == handler
+    assert len(asignal.subscribers) == 0
+
+    c = dict(called=0, disconnnect_handler=None)
+
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
+
+        click = Signal()
+
+        @click.on_disconnect
+        def click(self, handler, subscribers, disconnect):
+            c['called'] += 1
+            c['disconnect_handler'] = handler
+            assert len(subscribers) == 1
+            disconnect(handler)
+            return 'foo'
+
+        @handler('click')
+        def handler(self, *args, **kwargs):
+            pass
+    a = A()
+
+    def handler2(*args, **kwargs):
+        pass
+
+    a.click.connect(handler2)
+    res = a.click.disconnect(handler2)
+    assert res == 'foo'
+    assert c['called'] == 1
+    assert c['disconnect_handler'] == handler2
+    # class-level handlers are excluded
+    assert len(a.click.subscribers) == 0
