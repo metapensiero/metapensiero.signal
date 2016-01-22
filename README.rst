@@ -317,6 +317,93 @@ yourself:
   b.onclick.notify(1, kw='b')
   assert b.called == (1, 'b')
 
+Extensibility
+`````````````
+
+Signals support two way to extend their functionality. The first is
+global and is intended as a way to plug in signals into other event
+systems. Please have a look at the code in ``external.py`` and the
+corrisponding tests to learn how to use those abstract classes, they
+give you a way to tap into signal's machinery do your stuff.
+
+The second way is per-signal and allows you to define three functions
+to wrap around ``notify()``, ``connect()``, ``disconnect()`` and
+attach them to each instance of signal via decorators, much like with
+builtins properties.
+
+Each of these functions will receive all the relevant arguments to
+customize the behavior of the internal signal methods and will receive
+another argument that every function has to call in order to trigger
+the default behavior. The return value of your wrapper function will
+be returned to the calling context instead of default return values.
+
+Here is an example, pay attention to the signature of each wrapper
+beacuse you have to respect that:
+
+.. code:: python
+
+  from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
+
+  c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None,
+           disconnnect_handler=None, handler2_called=0, handler2_args=None)
+
+  class A(metaclass=SignalAndHandlerInitMeta):
+
+       @Signal
+       def click(self, subscribers, notify, *args, **kwargs):
+           c['called'] += 1
+           c['wrap_args'] = (args, kwargs)
+           assert len(subscribers) == 2
+           assert isinstance(self, A)
+           notify('foo', k=2)
+           return 'mynotify'
+
+       @click.on_connect
+       def click(self, handler, subscribers, connect):
+           c['called'] += 1
+           c['connect_handler'] = handler
+           assert len(subscribers) == 0
+           connect(handler)
+           return 'myconnect'
+
+       @click.on_disconnect
+       def click(self, handler, subscribers, disconnect):
+           c['called'] += 1
+           c['disconnect_handler'] = handler
+           assert len(subscribers) == 1
+           disconnect(handler)
+           return 'mydisconnect'
+
+       @handler('click')
+       def handler(self, *args, **kwargs):
+           c['handler_called'] += 1
+           c['handler_args'] = (args, kwargs)
+
+  a = A()
+
+  def handler2(*args, **kwargs):
+      c['handler2_called'] += 1
+      c['handler2_args'] = (args, kwargs)
+
+  res = a.click.connect(handler2)
+  assert res == 'myconnect'
+  res = a.click.notify('bar', k=1)
+  assert res == 'mynotify'
+  res = a.click.disconnect(handler2)
+  assert res == 'mydisconnect'
+  assert c['called'] == 3
+  assert c['wrap_args'] == (('bar',), {'k': 1})
+  assert c['handler_called'] == 1
+  assert c['handler_args'] == (('foo',), {'k': 2})
+  assert c['handler2_called'] == 1
+  assert c['handler2_args'] == (('foo',), {'k': 2})
+  assert c['disconnect_handler'] == handler2
+  assert c['connect_handler'] == handler2
+
+As you can see, with this way of managing wrappers to default
+behaviors, you can modify arguments, return customized values or even
+avoid triggering the default behavior.
+
 Testing
 +++++++
 
