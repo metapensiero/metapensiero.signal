@@ -7,6 +7,7 @@
 #
 
 import os
+import sys
 from codecs import open
 
 from setuptools import setup, find_packages
@@ -18,6 +19,17 @@ with open(os.path.join(here, 'CHANGES.rst'), encoding='utf-8') as f:
     CHANGES = f.read()
 with open(os.path.join(here, 'version.txt'), encoding='utf-8') as f:
     VERSION = f.read().strip()
+
+PY3 = sys.version_info[:1] == (3,)
+
+INSTALL_REQUIRES = [
+    'setuptools',
+    'six'
+]
+
+if PY3:
+    INSTALL_REQUIRES.append('metapensiero.asyncio.transaction>=0.5')
+
 
 setup(
     name="metapensiero.signal",
@@ -37,6 +49,10 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
         ],
     keywords='',
 
@@ -44,11 +60,8 @@ setup(
     package_dir={'': 'src'},
     namespace_packages=['metapensiero',],
 
-    install_requires=[
-        'setuptools',
-        'metapensiero.asyncio.transaction>=0.3'
-    ],
+    install_requires=INSTALL_REQUIRES,
     extras_require={'dev': ['metapensiero.tool.bump_version']},
     setup_requires=['pytest-runner'],
-    tests_require=['pytest', 'pytest-asyncio'],
+    tests_require=['pytest'],
 )

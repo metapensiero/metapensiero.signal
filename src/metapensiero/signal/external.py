@@ -5,10 +5,15 @@
 # :License:   GNU General Public License version 3 or later
 #
 
+from __future__ import unicode_literals, absolute_import
+
+import six
+
 from abc import ABCMeta, abstractmethod
 
 
-class ExternalSignaller(metaclass=ABCMeta):
+@six.add_metaclass(ABCMeta)
+class ExternalSignaller(object):
     """An ExternalSignaler ABC, used to interface Signals with external
     event systems.
     """

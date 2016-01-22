@@ -5,24 +5,38 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-import asyncio
-import weakref
+from __future__ import unicode_literals, absolute_import
 
-from metapensiero.asyncio import transaction
+import six
+
+if six.PY3:
+    import asyncio
+else:
+    asyncio = None
+
+import weakref
+import logging
+
+if six.PY3:
+    from metapensiero.asyncio import transaction
+else:
+    transaction = None
 
 from .weak import MethodAwareWeakSet
 from . import ExternalSignaller
 from . import SignalAndHandlerInitMeta
 
+logger = logging.getLogger(__name__)
 
-class Signal:
+
+class Signal(object):
     """ The atom of event handling
     """
     _external_signaller = None
     _name = None
 
 
-    class InstanceProxy:
+    class InstanceProxy(object):
         """A small proxy used to get instance context when signal is a
         member of a class.
         """
@@ -51,9 +65,9 @@ class Signal:
             return self.signal.disconnect(cback,
                                           subscribers=self.subscribers)
 
-        def notify(self, *args, loop=None, **kwargs):
+        def notify(self, *args, **kwargs):
             "See signal"
-            loop = loop or self.loop
+            loop = kwargs.pop('loop', self.loop)
             return self.signal.notify(*args,
                                       subscribers=self.subscribers,
                                       instance=self.instance,
@@ -63,7 +77,10 @@ class Signal:
     def __init__(self, name=None, loop=None, external=None):
         self.name = name
         self.subscribers = MethodAwareWeakSet()
-        self.loop = loop or asyncio.get_event_loop()
+        if six.PY3:
+            self.loop = loop or asyncio.get_event_loop()
+        else:
+            self.loop = None
         self.instance_subscribers = weakref.WeakKeyDictionary()
         self.external_signaller = external
 
@@ -105,8 +122,7 @@ class Signal:
             subscribers = self.subscribers
         subscribers.remove(cback)
 
-    def notify(self, *args, subscribers=None,
-               instance=None, loop=None, **kwargs):
+    def notify(self, *args, **kwargs):
         """Call all the registered handlers with the arguments passed.
         If this signal is a class member, call also the handlers registered
         at class-definition time. If an external publish function is
@@ -114,7 +130,11 @@ class Signal:
 
         Returns a list with the results from the handlers execution.
         """
-        # if i'm not called from an instance, use the default subscribers
+        # if i'm not called from an instance, use the default
+        # subscribers
+        subscribers = kwargs.pop('subscribers', None)
+        instance = kwargs.pop('instance', None)
+        loop = kwargs.pop('loop', None)
         if subscribers is None:
             subscribers = self.subscribers
         subscribers = set(subscribers)
@@ -128,21 +148,27 @@ class Signal:
         for method in subscribers:
             try:
                 res = method(*args, **kwargs)
-                if asyncio.iscoroutine(res):
-                    coros.append(res)
+                if six.PY3:
+                    if asyncio.iscoroutine(res):
+                        coros.append(res)
+                    else:
+                        results.append(res)
                 else:
                     results.append(res)
-            except Exception as e:
+            except:
                 logger.exception('Error in notify')
         loop = loop or self.loop
         # maybe do a round of external publishing
         ext_res = self.ext_publish(instance, loop, args, kwargs)
-        if asyncio.iscoroutine(ext_res):
-            coros.append(ext_res)
-        trans = transaction.get(None)
-        all_co = asyncio.gather(*coros, loop=loop)
-        if trans: trans.add(all_co)
-        results.append(all_co)
+        if six.PY3:
+            if asyncio.iscoroutine(ext_res):
+                coros.append(ext_res)
+
+            trans = transaction.get(None)
+            all_co = asyncio.gather(*coros, loop=loop)
+            if trans:
+                trans.add(all_co)
+            results.append(all_co)
         return results
 
     def ext_publish(self, instance, loop, args, kwargs):
@@ -150,7 +176,7 @@ class Signal:
         notify external event systems.
         """
         if self.external_signaller:
-            # Assume that the loop is manages by the external handler
+            # Assumes that the loop is managed by the external handler
             return self.external_signaller.publish(self, instance, loop,
                                                    args, kwargs)
 
@@ -167,4 +193,4 @@ class Signal:
         cls = instance.__class__
         handlers = cls._signal_handlers
         return set(getattr(instance, hname) for hname, sig_name in
-                   handlers.items() if sig_name == self.name)
+                   six.iteritems(handlers) if sig_name == self.name)

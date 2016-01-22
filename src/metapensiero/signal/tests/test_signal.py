@@ -5,24 +5,38 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-import asyncio
+from __future__ import unicode_literals, absolute_import
+
+import six
+
+if six.PY3:
+    import asyncio
+else:
+    asyncio = None
 
 import pytest
+
 from metapensiero.signal import Signal
 from metapensiero.signal import SignalAndHandlerInitMeta, handler
 
+
+def _coroutine(func):
+    if six.PY3:
+        return asyncio.coroutine(func)
+    else:
+        return func
+
+
 def test_01_signal_with_functions():
     signal = Signal()
-    called1 = False
-    called2 = False
+    c = dict(called1=False, called2=False)
 
     def handler1(arg, kw):
-        nonlocal called1
-        called1 = (arg, kw)
+        # let python get the outer var here without using PY3 "nonlocal"
+        c['called1'] = (arg, kw)
 
     def handler2(arg, kw):
-        nonlocal called2
-        called2 = (arg, kw)
+        c['called2'] = (arg, kw)
 
     signal.connect(handler1)
     signal.connect(handler2)
@@ -30,28 +44,26 @@ def test_01_signal_with_functions():
     assert len(signal.subscribers) == 2
 
     signal.notify(1, kw='a')
-    assert called1 == (1, 'a')
-    assert called2 == (1, 'a')
+    assert c['called1'] == (1, 'a')
+    assert c['called2'] == (1, 'a')
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_02_signal_with_async_functions(events):
     signal = Signal()
-    called1 = False
-    called2 = False
-    events.define('h1', 'h2')
+    c = dict(called1=False, called2=False)
+    if six.PY3:
+        events.define('h1', 'h2')
 
-    @asyncio.coroutine
+    @_coroutine
     def handler1(arg, kw):
-        nonlocal called1
-        called1 = (arg, kw)
-        events.h1.set()
+        c['called1'] = (arg, kw)
+        if six.PY3:
+            events.h1.set()
 
-    @asyncio.coroutine
+    @_coroutine
     def handler2(arg, kw):
-        nonlocal called2
-        called2 = (arg, kw)
-        events.h2.set()
+        c['called2'] = (arg, kw)
+        if six.PY3:
+            events.h2.set()
 
     signal.connect(handler1)
     signal.connect(handler2)
@@ -59,27 +71,25 @@ def test_02_signal_with_async_functions(events):
     assert len(signal.subscribers) == 2
 
     signal.notify(1, kw='a')
-    yield from events.wait()
-    assert called1 == (1, 'a')
-    assert called2 == (1, 'a')
+    if six.PY3:
+        events.loop.run_until_complete(events.wait())
+    assert c['called1'] == (1, 'a')
+    assert c['called2'] == (1, 'a')
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_03_signal_with_mixed_functions(events):
     signal = Signal()
-    called1 = False
-    called2 = False
-    events.define('h1')
+    c = dict(called1=False, called2=False)
+    if six.PY3:
+        events.define('h1')
 
-    @asyncio.coroutine
+    @_coroutine
     def handler1(arg, kw):
-        nonlocal called1
-        called1 = (arg, kw)
-        events.h1.set()
+        c['called1'] = (arg, kw)
+        if six.PY3:
+            events.h1.set()
 
     def handler2(arg, kw):
-        nonlocal called2
-        called2 = (arg, kw)
+        c['called2'] = (arg, kw)
 
     signal.connect(handler1)
     signal.connect(handler2)
@@ -87,26 +97,26 @@ def test_03_signal_with_mixed_functions(events):
     assert len(signal.subscribers) == 2
 
     signal.notify(1, kw='a')
-    assert called2 == (1, 'a')
-    yield from events.wait()
-    assert called1 == (1, 'a')
+    assert c['called2'] == (1, 'a')
+    if six.PY3:
+        events.loop.run_until_complete(events.wait())
+    assert c['called1'] == (1, 'a')
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_04_signal_with_methods(events):
     signal = Signal()
-    called2 = False
 
-    class A:
+    class A(object):
         def __init__(self, name):
-            self.ev = events[name]
+            if six.PY3:
+                self.ev = events[name]
 
         called = False
 
-        @asyncio.coroutine
+        @_coroutine
         def handler(self, arg, kw):
             self.called = (arg, kw)
-            self.ev.set()
+            if six.PY3:
+                self.ev.set()
 
     a1 = A('a1')
     a2 = A('a2')
@@ -117,14 +127,13 @@ def test_04_signal_with_methods(events):
     assert len(signal.subscribers) == 2
 
     signal.notify(1, kw='a')
-    yield from events.wait()
+    if six.PY3:
+        events.loop.run_until_complete(events.wait())
     assert a1.called == (1, 'a')
     assert a2.called == (1, 'a')
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_05_class_defined_signal(events):
-    class A:
+    class A(object):
 
         # the name here is needed for classes that don't explicitly support
         # signals
@@ -133,24 +142,27 @@ def test_05_class_defined_signal(events):
         def __init__(self, name):
             self.called = False
             self.click.connect(self.onclick)
-            self.on_click_ev = events[name]
+            if six.PY3:
+                self.on_click_ev = events[name]
 
-        @asyncio.coroutine
+        @_coroutine
         def onclick(self, arg, kw):
             self.called = (arg, kw)
-            self.on_click_ev.set()
+            if six.PY3:
+                self.on_click_ev.set()
 
-    called1 = False
+    c = dict(called1=False)
 
-    @asyncio.coroutine
+    @_coroutine
     def handler1(arg, kw):
-        nonlocal called1
-        called1 = (arg, kw)
-        events.h1.set()
+        c['called1'] = (arg, kw)
+        if six.PY3:
+            events.h1.set()
 
     a1 = A('a1')
     a2 = A('a2')
-    events.define('h1')
+    if six.PY3:
+        events.define('h1')
 
     assert a1.called == False
     assert a2.called == False
@@ -162,44 +174,48 @@ def test_05_class_defined_signal(events):
     assert len(a2.click.subscribers) == 1
 
     a1.click.notify(1, kw='a')
-    yield from events.wait(events.a2)
+    if six.PY3:
+        events.loop.run_until_complete(events.wait(events.a2))
     assert a1.called == (1, 'a')
 
-    assert called1 == (1, 'a')
+    assert c['called1'] == (1, 'a')
     assert a2.called == False
 
     a2.click.notify(2, kw='b')
 
-    yield from events.wait()
+    if six.PY3:
+        events.loop.run_until_complete(events.wait())
 
     assert a1.called == (1, 'a')
-    assert called1 == (1, 'a')
+    assert c['called1'] == (1, 'a')
     assert a2.called == (2, 'b')
 
 
 def test_signal_06_init_mclass():
-    class A(metaclass=SignalAndHandlerInitMeta):
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
 
         click = Signal()
 
     assert A.click.name == 'click'
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_07_class_defined_signal_with_decorator_named(events):
-    class A(metaclass=SignalAndHandlerInitMeta):
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
 
         click = Signal()
 
         def __init__(self, name):
             self.called = False
-            self.a_ev = events['a_' + name]
+            if six.PY3:
+                self.a_ev = events['a_' + name]
 
         @handler('click')
-        @asyncio.coroutine
+        @_coroutine
         def onclick(self, arg, kw):
             self.called = (arg, kw)
-            self.a_ev.set()
+            if six.PY3:
+                self.a_ev.set()
             return 1
 
     a1 = A('a1')
@@ -212,7 +228,8 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     res = a1.click.notify(1, kw='a')
 
-    yield from events.a_a1.wait()
+    if six.PY3:
+        events.loop.run_until_complete(events.a_a1.wait())
     assert len(res) == 1
     assert a1.called == (1, 'a')
 
@@ -223,32 +240,36 @@ def test_07_class_defined_signal_with_decorator_named(events):
         def __init__(self, name):
             super().__init__(name)
             self.calledb = False
-            self.b_ev = events['b_' + name]
+            if six.PY3:
+                self.b_ev = events['b_' + name]
 
         @handler('click')
-        @asyncio.coroutine
+        @_coroutine
         def another_click_handler(self, arg, kw):
             self.calledb = (arg, kw)
-            self.b_ev.set()
+            if six.PY3:
+                self.b_ev.set()
             return 2
 
     b1 = B('b1')
-    a2 = A('a2')
 
     assert b1.called == False
     assert b1.calledb == False
 
     res = a1.click.notify(1, kw='a')
-    events.a_a1.clear()
-    yield from events.a_a1.wait()
+    if six.PY3:
+        events.a_a1.clear()
+    if six.PY3:
+        events.loop.run_until_complete(events.a_a1.wait())
     assert len(res) == 1
 
     assert b1.called == False
     assert b1.calledb == False
 
     res = b1.click.notify(2, kw='b')
-    yield from events.b_b1.wait()
-    yield from events.a_b1.wait()
+    if six.PY3:
+        events.loop.run_until_complete(events.b_b1.wait())
+        events.loop.run_until_complete(events.a_b1.wait())
 
     #assert len(res) == 2
 
@@ -261,10 +282,11 @@ def test_07_class_defined_signal_with_decorator_named(events):
     class C(B):
 
         @handler('click')
-        @asyncio.coroutine
+        @_coroutine
         def onclick(self, arg, kw):
             self.called = (arg, kw)
-            self.a_ev.set()
+            if six.PY3:
+                self.a_ev.set()
             return 3
 
     c1 = C('c1')
@@ -273,8 +295,9 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert c1.calledb == False
 
     res = c1.click.notify(3, kw='c')
-    yield from events.a_c1.wait()
-    yield from events.b_c1.wait()
+    if six.PY3:
+        events.loop.run_until_complete(events.a_c1.wait())
+        events.loop.run_until_complete(events.b_c1.wait())
 
     #assert len(res) == 2
 
@@ -285,13 +308,13 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert b1.calledb == (2, 'b')
     assert a1.called == (1, 'a')
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_08_class_defined_signal_with_decorator_mixed(events):
 
-    from metapensiero.asyncio import transaction
+    if six.PY3:
+        from metapensiero.asyncio import transaction
 
-    class A(metaclass=SignalAndHandlerInitMeta):
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
 
         click = Signal()
 
@@ -304,7 +327,7 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
             self.called = (arg, kw)
 
         @handler('click')
-        @asyncio.coroutine
+        @_coroutine
         def click2(self, arg, kw):
             self.called2 = (arg, kw)
 
@@ -313,79 +336,81 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
     assert a1.called == False
     assert a1.called2 == False
 
-    trans = transaction.begin()
+    if six.PY3:
+        trans = transaction.begin()
     a1.click.notify(1, kw='a')
     assert a1.called == (1, 'a')
     assert a1.called2 == False
-    yield from trans.end()
+    if six.PY3:
+        events.loop.run_until_complete(trans.end())
     assert a1.called2 == (1, 'a')
 
 
 def test_09_external_signaller():
 
-    import asyncio
+    if six.PY3:
+        import asyncio
     from metapensiero.signal import ExternalSignaller
 
-    publish_called = False
-    register_called = False
+    c = dict(publish_called=False, register_called=False)
 
     @ExternalSignaller.register
-    class MyExternalSignaller:
+    class MyExternalSignaller(object):
 
         def publish(self, signal, instance, loop, args, kwargs):
-            nonlocal publish_called
-            publish_called = (signal, instance, loop, args, kwargs)
+            c['publish_called'] = (signal, instance, loop, args, kwargs)
 
         def register_signal(self, signal, name):
-            nonlocal register_called
-            register_called = (signal, name)
+            c['register_called'] = (signal, name)
 
-    assert publish_called == False
-    assert register_called == False
+    assert c['register_called'] == False
+    assert c['publish_called'] == False
 
     signaller = MyExternalSignaller()
     signal = Signal(name='foo', external=signaller)
 
-    assert register_called == (signal, 'foo')
-    assert publish_called == False
+    assert c['register_called'] == (signal, 'foo')
+    assert c['publish_called'] == False
 
     signal.notify('foo', zoo='bar')
-    assert publish_called == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
-    assert register_called == (signal, 'foo')
+    if six.PY3:
+        assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
+    else:
+        assert c['publish_called'] == (signal, None, None, ('foo',), {'zoo': 'bar'})
+    assert c['register_called'] == (signal, 'foo')
 
-@pytest.mark.asyncio
-@asyncio.coroutine
 def test_10_external_signaller_async(events):
 
     from metapensiero.signal import ExternalSignaller
 
-    publish_called = False
-    register_called = False
+    c = dict(publish_called=False, register_called=False)
 
     @ExternalSignaller.register
-    class MyExternalSignaller:
+    class MyExternalSignaller(object):
 
-        @asyncio.coroutine
+        @_coroutine
         def publish(self, signal, instance, loop, args, kwargs):
-            nonlocal publish_called
-            publish_called = (signal, instance, loop, args, kwargs)
-            events.publish.set()
+            c['publish_called'] = (signal, instance, loop, args, kwargs)
+            if six.PY3:
+                events.publish.set()
 
         def register_signal(self, signal, name):
-            nonlocal register_called
-            register_called = (signal, name)
+            c['register_called'] = (signal, name)
 
-    assert publish_called == False
-    assert register_called == False
+    assert c['register_called'] == False
+    assert c['publish_called'] == False
 
     signaller = MyExternalSignaller()
     signal = Signal(name='foo', external=signaller)
 
-    assert register_called == (signal, 'foo')
-    assert publish_called == False
+    assert c['register_called'] == (signal, 'foo')
+    assert c['publish_called'] == False
 
     signal.notify('foo', zoo='bar')
-    assert publish_called == False
-    yield from events.publish.wait()
-    assert publish_called == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
-    assert register_called == (signal, 'foo')
+    assert c['publish_called'] == False
+    if six.PY3:
+        events.loop.run_until_complete(events.publish.wait())
+        assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
+    else:
+        assert c['publish_called'] == (signal, None, None, ('foo',), {'zoo': 'bar'})
+    assert c['register_called'] == (signal, 'foo')

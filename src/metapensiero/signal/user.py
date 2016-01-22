@@ -5,7 +5,14 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-from collections import ChainMap
+from __future__ import unicode_literals, absolute_import
+
+import six
+
+if six.PY3:
+    from collections import ChainMap
+else:
+    ChainMap = None
 
 from .external import ExternalSignallerAndHandler
 from . import SignalError
@@ -14,7 +21,7 @@ SPEC_CONTAINER_MEMBER_NAME = '_publish'
 "Special attribute name to attach specific info to decorated methods."
 
 
-class SignalNameHandlerDecorator:
+class SignalNameHandlerDecorator(object):
     "A decorator used to mark a method as handler for a particular signal."
 
     def __init__(self, signal_name):
@@ -66,7 +73,7 @@ class SignalAndHandlerInitMeta(type):
         """
         from . import Signal
         signaller = cls._external_signaller_and_handler
-        for aname, avalue in namespace.items():
+        for aname, avalue in six.iteritems(namespace):
             if isinstance(avalue, Signal):
                 avalue.name = aname
                 if signaller:
@@ -77,7 +84,7 @@ class SignalAndHandlerInitMeta(type):
         """Add name info to every "local" (present in the body of this class)
         handler and add it to the mapping.
         """
-        for aname, avalue in namespace.items():
+        for aname, avalue in six.iteritems(namespace):
             sig_name = cls._is_handler(aname, avalue)
             if sig_name:
                 handlers[aname] = sig_name
@@ -85,7 +92,7 @@ class SignalAndHandlerInitMeta(type):
     def _subscribe_local_handlers(cls, signals, handlers, namespace):
         """For every marked handler, see if there is a suitable signal and
         add it."""
-        for aname, avalue in namespace.items():
+        for aname, avalue in six.iteritems(namespace):
             # WARN: this code doesn't take in account the case where a new
             # method with the same name of an handler in a base class is
             # present in this class but it isn't an handler (so the handler
@@ -100,14 +107,27 @@ class SignalAndHandlerInitMeta(type):
         """For all of the names build a ChainMap containing a map for every
         base class."""
         result = []
-        for name in names:
-            result.append(ChainMap({}, *(getattr(base, name, {}) for base in bases)))
+        # chainmaps aren't available on PY2
+        if six.PY3:
+            for name in names:
+                result.append(ChainMap({}, *(getattr(base, name, {}) for
+                                             base in bases)))
+        else:
+            bases = list(bases)
+            bases.reverse()
+            for name in names:
+                reg = {}
+                for base in bases:
+                    base_reg = getattr(base, name, None)
+                    if base_reg:
+                        reg.update(base_reg)
+                result.append(reg)
         return result
 
     def _build_instance_handler_mapping(cls, instance, handle_d):
         """For every unbounded handler, get the bounded version."""
         res = {}
-        for member_name, sig_name in handle_d.items():
+        for member_name, sig_name in six.iteritems(handle_d):
             if sig_name in res:
                 sig_handlers = res[sig_name]
             else:
