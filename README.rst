@@ -55,7 +55,7 @@ The most significant component provided by this package is the class
   called1 = False
   called2 = False
 
-   def handler1(arg, kw):
+  def handler1(arg, kw):
       nonlocal called1
       called1 = (arg, kw)
 
@@ -78,6 +78,9 @@ method.
 As you can see above, the way to fire an event is by calling the
 ``notify()`` method and any argument or keyword argument passed to
 that function will be added to the handlers call.
+
+It's possible to remove all the connected handlers by invoking the
+``clear()`` method.
 
 Asynchronous signal handlers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

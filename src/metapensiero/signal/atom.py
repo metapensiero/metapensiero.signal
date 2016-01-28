@@ -76,6 +76,10 @@ class Signal(object):
                                       loop=loop,
                                       **kwargs)
 
+        def clear(self):
+            """Remove all the connected handlers, for this instance"""
+            self.subscribers.clear()
+
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
                  loop=None, external=None):
         self.name = name
@@ -258,3 +262,7 @@ class Signal(object):
         "On disconnect optional wrapper decorator"
         self._fdisconnect = fdisconnect
         return self
+
+    def clear(self):
+        """Remove all the connected handlers"""
+        self.subscribers.clear()
