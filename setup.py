@@ -55,7 +55,7 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU General Public License (GPL)",
         ],
-    keywords='',
+    keywords='signal event asyncio framework',
 
     packages=find_packages('src'),
     package_dir={'': 'src'},
