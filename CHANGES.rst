@@ -36,3 +36,8 @@ Changes
 ~~~~~~~~~~~~~~~~
 
 - add ``clear()`` method
+
+0.7 (2016-02-03)
+~~~~~~~~~~~~~~~~
+
+- force re-raise of captured exceptions during notify

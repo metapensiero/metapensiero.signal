@@ -214,6 +214,7 @@ class Signal(object):
                     results.append(res)
             except:
                 logger.exception('Error in notify')
+                raise
         loop = loop or self.loop
         # maybe do a round of external publishing
         ext_res = self.ext_publish(instance, loop, args, kwargs)
