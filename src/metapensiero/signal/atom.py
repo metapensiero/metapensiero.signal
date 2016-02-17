@@ -35,7 +35,6 @@ class Signal(object):
     _external_signaller = None
     _name = None
 
-
     class InstanceProxy(object):
         """A small proxy used to get instance context when signal is a
         member of a class.
