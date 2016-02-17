@@ -173,8 +173,10 @@ class Signal(object):
         # if i'm not called from an instance, use the default
         # subscribers
         if subscribers is None:
-            subscribers = self.subscribers
-        subscribers = set(subscribers)
+            subscribers = set(self.subscribers)
+        else:
+            # do not keep weaksets for the duration of the notification
+            subscribers = set(self.subscribers | subscribers)
         if instance and self.name and isinstance(instance.__class__,
                                                  SignalAndHandlerInitMeta):
             # merge the set of instance-only handlers with those declared
