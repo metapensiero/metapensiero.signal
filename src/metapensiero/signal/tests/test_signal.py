@@ -604,3 +604,62 @@ def test_13_disconnect_wrapper():
     assert c['disconnect_handler'] == handler2
     # class-level handlers are excluded
     assert len(a.click.subscribers) == 0
+
+def test_14_nonexistent_signal():
+
+    from metapensiero.signal import SignalError
+
+    with pytest.raises(SignalError):
+        @six.add_metaclass(SignalAndHandlerInitMeta)
+        class A(object):
+
+            @Signal
+            def click(self, subscribers, notify, *args, **kwargs):
+                notify('foo', k=2)
+
+            @handler('dblclick')
+            def handler(self, *args, **kwargs):
+                pass
+
+def test_15_external_signaller_filters_handlers():
+
+    from metapensiero.signal import ExternalSignallerAndHandler
+
+    class MyExternalSignaller(object):
+
+        def publish(self, signal, instance, loop, args, kwargs):
+            pass
+
+        def register_signal(self, signal, name):
+            pass
+
+        def register_class(self, cls, namespace, signals, handlers):
+            ext_handlers = {}
+            for hname, sig_name in six.iteritems(handlers):
+                if sig_name not in signals and sig_name.startswith('myext'):
+                    ext_handlers[hname] = sig_name
+            for hname in ext_handlers.keys():
+                del handlers[hname]
+            cls._ext_handlers = ext_handlers
+
+    ExternalSignallerAndHandler.register(MyExternalSignaller)
+    signaller = MyExternalSignaller()
+
+    MySignalMeta = SignalAndHandlerInitMeta.with_external(signaller,
+                                                          'MySignalMeta')
+
+    @six.add_metaclass(MySignalMeta)
+    class A(object):
+
+        click = Signal()
+
+        @handler('click')
+        def handler1(self, *args, **kwargs):
+            pass
+
+        @handler('myext.dbclick')
+        def handler2(self, *args, **kwargs):
+            pass
+
+    assert A._ext_handlers == {'handler2': 'myext.dbclick'}
+    assert A._signal_handlers == {'handler1': 'click'}

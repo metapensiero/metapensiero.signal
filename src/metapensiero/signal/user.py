@@ -62,7 +62,7 @@ class SignalAndHandlerInitMeta(type):
         cls._find_local_handlers(handlers, namespace)
         if signaller:
             signaller.register_class(cls, namespace, signals, handlers)
-        cls._subscribe_local_handlers(signals, handlers, namespace)
+        cls._check_local_handlers(signals, handlers, namespace)
         cls._signals = signals
         cls._signal_handlers = handlers
 
@@ -89,18 +89,15 @@ class SignalAndHandlerInitMeta(type):
             if sig_name:
                 handlers[aname] = sig_name
 
-    def _subscribe_local_handlers(cls, signals, handlers, namespace):
-        """For every marked handler, see if there is a suitable signal and
-        add it."""
-        for aname, avalue in six.iteritems(namespace):
+    def _check_local_handlers(cls, signals, handlers, namespace):
+        """For every marked handler, see if there is a suitable signal. If
+        not, raise an error."""
+        for aname, sig_name in six.iteritems(handlers):
             # WARN: this code doesn't take in account the case where a new
             # method with the same name of an handler in a base class is
             # present in this class but it isn't an handler (so the handler
             # with the same name should be removed from the handlers)
-            sig_name = cls._is_handler(aname, avalue)
-            if sig_name and sig_name in signals:
-                handlers[aname] = sig_name
-            elif sig_name and sig_name not in signals:
+            if sig_name not in signals:
                 raise SignalError("Cannot find a signal named '%s'" % sig_name)
 
     def _build_inheritation_chain(cls, bases, *names):
