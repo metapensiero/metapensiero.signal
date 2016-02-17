@@ -146,4 +146,7 @@ class SignalAndHandlerInitMeta(type):
     def with_external(mclass, external, name=None):
         assert isinstance(external, ExternalSignallerAndHandler)
         name = name or "ExternalSignalAndHandlerInitMeta"
+        if six.PY2:
+            # Py2 needs a string
+            name = str(name)
         return type(name, (mclass,), {'_external_signaller_and_handler': external})
