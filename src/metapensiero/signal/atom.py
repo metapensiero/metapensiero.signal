@@ -117,7 +117,7 @@ class Signal(object):
 
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
-        Every handler added should be a coroutine.
+        Any handler added can be a coroutine.
         """
         if subscribers is None:
             subscribers = self.subscribers
