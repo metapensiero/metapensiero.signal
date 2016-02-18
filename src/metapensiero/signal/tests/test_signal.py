@@ -360,7 +360,7 @@ def test_09_external_signaller():
 
     class MyExternalSignaller(object):
 
-        def publish(self, signal, instance, loop, args, kwargs):
+        def publish_signal(self, signal, instance, loop, args, kwargs):
             c['publish_called'] = (signal, instance, loop, args, kwargs)
 
         def register_signal(self, signal, name):
@@ -394,7 +394,7 @@ def test_10_external_signaller_async(events):
     class MyExternalSignaller(object):
 
         @_coroutine
-        def publish(self, signal, instance, loop, args, kwargs):
+        def publish_signal(self, signal, instance, loop, args, kwargs):
             c['publish_called'] = (signal, instance, loop, args, kwargs)
             if six.PY3:
                 events.publish.set()
@@ -627,7 +627,7 @@ def test_15_external_signaller_filters_handlers():
 
     class MyExternalSignaller(object):
 
-        def publish(self, signal, instance, loop, args, kwargs):
+        def publish_signal(self, signal, instance, loop, args, kwargs):
             pass
 
         def register_signal(self, signal, name):

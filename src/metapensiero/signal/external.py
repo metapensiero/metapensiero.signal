@@ -19,7 +19,7 @@ class ExternalSignaller(object):
     """
 
     @abstractmethod
-    def publish(self, signal, instance, loop, args, kwargs):
+    def publish_signal(self, signal, instance, loop, args, kwargs):
         """Publish a notification externally. This can be either a normal method or
         a coroutine.
         """

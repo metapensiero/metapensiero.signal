@@ -236,8 +236,8 @@ class Signal(object):
         """
         if self.external_signaller:
             # Assumes that the loop is managed by the external handler
-            return self.external_signaller.publish(self, instance, loop,
-                                                   args, kwargs)
+            return self.external_signaller.publish_signal(self, instance, loop,
+                                                          args, kwargs)
 
     def __get__(self, instance, cls=None):
         if instance:
