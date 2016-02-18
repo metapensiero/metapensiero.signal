@@ -633,7 +633,7 @@ def test_15_external_signaller_filters_handlers():
         def register_signal(self, signal, name):
             pass
 
-        def register_class(self, cls, namespace, signals, handlers):
+        def register_class(self, cls, bases, namespace, signals, handlers):
             ext_handlers = {}
             for hname, sig_name in six.iteritems(handlers):
                 if sig_name not in signals and sig_name.startswith('myext'):

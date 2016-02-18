@@ -61,7 +61,7 @@ class SignalAndHandlerInitMeta(type):
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace)
         if signaller:
-            signaller.register_class(cls, namespace, signals, handlers)
+            signaller.register_class(cls, bases, namespace, signals, handlers)
         cls._check_local_handlers(signals, handlers, namespace)
         cls._signals = signals
         cls._signal_handlers = handlers

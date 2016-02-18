@@ -37,6 +37,6 @@ class ExternalSignallerAndHandler(ExternalSignaller):
     """
 
     @abstractmethod
-    def register_class(cls, namespace, signals, handlers):
+    def register_class(cls, bases, namespace, signals, handlers):
         """Register a new class"""
         pass
