@@ -50,7 +50,7 @@ class Signal(object):
             """Get per-instance subscribers from the signal.
             """
             data = self.signal.instance_subscribers
-            if not self.instance in data:
+            if self.instance not in data:
                 data[self.instance] = MethodAwareWeakSet()
             return data[self.instance]
 
