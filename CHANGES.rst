@@ -41,3 +41,8 @@ Changes
 ~~~~~~~~~~~~~~~~
 
 - force re-raise of captured exceptions during notify
+
+0.8 (2016-03-24)
+~~~~~~~~~~~~~~~~
+
+- improvements to the external plugin, now used in raccoon.
