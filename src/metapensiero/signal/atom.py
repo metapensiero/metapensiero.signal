@@ -14,8 +14,9 @@ if six.PY3:
 else:
     asyncio = None
 
-import weakref
+from functools import partial
 import logging
+import weakref
 
 if six.PY3:
     from metapensiero.asyncio import transaction
