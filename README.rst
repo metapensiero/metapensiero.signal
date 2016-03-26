@@ -407,6 +407,41 @@ As you can see, with this way of managing wrappers to default
 behaviors, you can modify arguments, return customized values or even
 avoid triggering the default behavior.
 
+There are cases when you want to notify the callback during
+``on_connect`` or ``on_disconnect`` wrappers, for example when your
+handler has the chance of being connected too late to the signal,
+where a notification has been delivered already. In such cases you may
+want to check for this situation in the wrapper and immediately notify
+the late callback if it's the case.
+
+The system offers a facility for doing exactly that using ``Signal``'s
+internal machinery, so handling possible coroutines by appending them
+to the on-going transaction. The ``connect`` and ``disconnect``
+wrappers parameter of the preceding example have another member, a
+function ``notify()`` that will take the  callback as first argument,
+and then any other argument that will be passed to the handler. So,
+let's see and example:
+
+.. code:: python
+
+  class A(metaclass=SignalAndHandlerInitMeta):
+
+       click = Signal()
+
+       @click.on_connect
+       def click(self, handler, subscribers, connect):
+           if self.clicked:
+               connect.notify(handler)
+           connect(handler)
+
+       def __init__(self):
+           self.clicked = False
+
+       @handler
+       def click_handler(self):
+           self.clicked = True
+
+
 Testing
 -------
 
