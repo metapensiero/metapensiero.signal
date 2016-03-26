@@ -46,3 +46,10 @@ Changes
 ~~~~~~~~~~~~~~~~
 
 - improvements to the external plugin, now used in raccoon.
+
+0.9 (2016-03-26)
+~~~~~~~~~~~~~~~~
+
+- better parameters naming
+- pass additional ``notify()`` function to wrappers
+- updated documentation
