@@ -71,9 +71,9 @@ class Signal(object):
             "See signal"
             loop = kwargs.pop('loop', self.loop)
             return self.signal.notify(*args,
-                                      subscribers=self.subscribers,
-                                      instance=self.instance,
-                                      loop=loop,
+                                      _subscribers=self.subscribers,
+                                      _instance=self.instance,
+                                      _loop=loop,
                                       **kwargs)
 
         def clear(self):
@@ -172,9 +172,9 @@ class Signal(object):
         to really start the notification and a set of the registered
         class-defined and per-instance subscribers.
         """
-        subscribers = kwargs.pop('subscribers', None)
-        instance = kwargs.pop('instance', None)
-        loop = kwargs.pop('loop', None)
+        subscribers = kwargs.pop('_subscribers', None)
+        instance = kwargs.pop('_instance', None)
+        loop = kwargs.pop('_loop', None)
         # if i'm not called from an instance, use the default
         # subscribers
         if subscribers is None:
@@ -189,16 +189,16 @@ class Signal(object):
             subscribers |= self._get_class_handlers(instance)
         if self._fnotify:
             def cback(*args, **kwargs):
-                return self._notify(subscribers, instance, loop, *args, **kwargs)
+                return self._notify(subscribers, instance, loop, args, kwargs)
             if instance:
                 result = self._fnotify(instance, subscribers, cback, *args, **kwargs)
             else:
                 result = self._fnotify(subscribers, cback, *args, **kwargs)
         else:
-            result = self._notify(subscribers, instance, loop, *args, **kwargs)
+            result = self._notify(subscribers, instance, loop, args, kwargs)
         return result
 
-    def _notify(self, subscribers, instance, loop, *args, **kwargs):
+    def _notify(self, subscribers, instance, loop, args, kwargs):
         """Call all the registered handlers with the arguments passed.
         If this signal is a class member, call also the handlers registered
         at class-definition time. If an external publish function is
@@ -249,7 +249,7 @@ class Signal(object):
             loop = self.__get__(instance).loop
         else:
             loop = None
-        return self._notify(set((cback,)), instance, loop, *args, **kwargs)
+        return self._notify(set((cback,)), instance, loop, args, kwargs)
 
     def __get__(self, instance, cls=None):
         if instance:
