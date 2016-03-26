@@ -126,6 +126,8 @@ class Signal(object):
         if self._fconnect:
             def _connect(cback):
                 self._connect(subscribers, cback)
+
+            _connect.notify = partial(self._notify_one, instance)
             if instance:
                 result = self._fconnect(instance, cback, subscribers, _connect)
             else:
@@ -148,6 +150,8 @@ class Signal(object):
         if self._fdisconnect:
             def _disconnect(cback):
                 self._disconnect(subscribers, cback)
+
+            _disconnect.notify = partial(self._notify_one, instance)
             if instance:
                 result = self._fdisconnect(instance, cback, subscribers,
                                            _disconnect)
@@ -239,6 +243,13 @@ class Signal(object):
             # Assumes that the loop is managed by the external handler
             return self.external_signaller.publish_signal(self, instance, loop,
                                                           args, kwargs)
+
+    def _notify_one(self, instance, cback, *args, **kwargs):
+        if instance:
+            loop = self.__get__(instance).loop
+        else:
+            loop = None
+        return self._notify(set((cback,)), instance, loop, *args, **kwargs)
 
     def __get__(self, instance, cls=None):
         if instance:
