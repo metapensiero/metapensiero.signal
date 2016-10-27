@@ -27,7 +27,7 @@ def _coroutine(func):
         return func
 
 
-def test_01_signal_with_functions():
+def test_01_signal_with_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
 
@@ -43,7 +43,9 @@ def test_01_signal_with_functions():
 
     assert len(signal.subscribers) == 2
 
-    signal.notify(1, kw='a')
+    res = signal.notify(1, kw='a')
+    if six.PY3:
+        events.loop.run_until_complete(res)
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
 
@@ -71,8 +73,9 @@ def test_02_signal_with_async_functions(events):
 
     assert len(signal.subscribers) == 2
 
-    signal.notify(1, kw='a')
+    res = signal.notify(1, kw='a')
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.wait())
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
@@ -98,7 +101,9 @@ def test_03_signal_with_mixed_functions(events):
 
     assert len(signal.subscribers) == 2
 
-    signal.notify(1, kw='a')
+    res = signal.notify(1, kw='a')
+    if six.PY3:
+        events.loop.run_until_complete(res)
     assert c['called2'] == (1, 'a')
     if six.PY3:
         events.loop.run_until_complete(events.wait())
@@ -129,8 +134,9 @@ def test_04_signal_with_methods(events):
 
     assert len(signal.subscribers) == 2
 
-    signal.notify(1, kw='a')
+    res = signal.notify(1, kw='a')
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.wait())
     assert a1.called == (1, 'a')
     assert a2.called == (1, 'a')
@@ -177,17 +183,18 @@ def test_05_class_defined_signal(events):
     assert len(a1.click.subscribers) == 2
     assert len(a2.click.subscribers) == 1
 
-    a1.click.notify(1, kw='a')
+    res = a1.click.notify(1, kw='a')
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.wait(events.a2))
     assert a1.called == (1, 'a')
 
     assert c['called1'] == (1, 'a')
     assert a2.called is False
 
-    a2.click.notify(2, kw='b')
-
+    res = a2.click.notify(2, kw='b')
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.wait())
 
     assert a1.called == (1, 'a')
@@ -234,7 +241,9 @@ def test_07_class_defined_signal_with_decorator_named(events):
     res = a1.click.notify(1, kw='a')
 
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.a_a1.wait())
+        res = res.result()
     assert len(res) == 1
     assert a1.called == (1, 'a')
 
@@ -265,7 +274,9 @@ def test_07_class_defined_signal_with_decorator_named(events):
     if six.PY3:
         events.a_a1.clear()
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.a_a1.wait())
+        res = res.result()
     assert len(res) == 1
 
     assert b1.called is False
@@ -273,10 +284,12 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     res = b1.click.notify(2, kw='b')
     if six.PY3:
-        events.loop.run_until_complete(events.b_b1.wait())
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.a_b1.wait())
+        events.loop.run_until_complete(events.b_b1.wait())
+        res = res.result()
 
-    #assert len(res) == 2
+    # assert len(res) == 2
 
     assert b1.called == (2, 'b')
     assert b1.calledb == (2, 'b')
@@ -301,8 +314,10 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     res = c1.click.notify(3, kw='c')
     if six.PY3:
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.a_c1.wait())
         events.loop.run_until_complete(events.b_c1.wait())
+        res = res.result()
 
     assert c1.called == (3, 'c')
     assert c1.calledb == (3, 'c')
@@ -340,17 +355,18 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
     assert a1.called is False
     assert a1.called2 is False
 
+    res = a1.click.notify(1, kw='a')
     if six.PY3:
         trans = transaction.begin()
-    a1.click.notify(1, kw='a')
     assert a1.called == (1, 'a')
     if six.PY3:
         assert a1.called2 is False
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(trans.end())
     assert a1.called2 == (1, 'a')
 
 
-def test_09_external_signaller():
+def test_09_external_signaller(events):
 
     if six.PY3:
         import asyncio
@@ -377,8 +393,9 @@ def test_09_external_signaller():
     assert c['register_called'] == (signal, 'foo')
     assert c['publish_called'] is False
 
-    signal.notify('foo', zoo='bar')
+    res = signal.notify('foo', zoo='bar')
     if six.PY3:
+        events.loop.run_until_complete(res)
         assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
     else:
         assert c['publish_called'] == (signal, None, None, ('foo',), {'zoo': 'bar'})
@@ -413,9 +430,9 @@ def test_10_external_signaller_async(events):
     assert c['register_called'] == (signal, 'foo')
     assert c['publish_called'] is False
 
-    signal.notify('foo', zoo='bar')
+    res = signal.notify('foo', zoo='bar')
     if six.PY3:
-        assert c['publish_called'] is False
+        events.loop.run_until_complete(res)
         events.loop.run_until_complete(events.publish.wait())
         assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
     else:
@@ -423,7 +440,7 @@ def test_10_external_signaller_async(events):
     assert c['register_called'] == (signal, 'foo')
 
 
-def test_11_notify_wrapper():
+def test_11_notify_wrapper(events):
 
     c = dict(called=0, wrap_args=None, handler_called=0, handler_args=None)
 
@@ -441,6 +458,7 @@ def test_11_notify_wrapper():
 
     asignal.connect(handler)
     res = asignal.notify('bar', k=1)
+
     assert res == 'foo'
     assert c['called'] == 1
     assert c['wrap_args'] == (('bar',), {'k': 1})
@@ -484,7 +502,7 @@ def test_11_notify_wrapper():
     assert c['handler2_args'] == (('foo',), {'k': 2})
 
 
-def test_12_connect_wrapper():
+def test_12_connect_wrapper(events):
 
     c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None)
 
@@ -503,7 +521,9 @@ def test_12_connect_wrapper():
         c['handler_args'] = (args, kwargs)
 
     res = asignal.connect(handler)
-    asignal.notify('bar', k=1)
+    res2 = asignal.notify('bar', k=1)
+    if six.PY3:
+        events.loop.run_until_complete(res2)
 
     assert res == 'foo'
     assert c['called'] == 1
@@ -539,7 +559,9 @@ def test_12_connect_wrapper():
         c['handler2_args'] = (args, kwargs)
 
     res = a.click.connect(handler2)
-    a.click.notify('bar', k=1)
+    res2 = a.click.notify('bar', k=1)
+    if six.PY3:
+        events.loop.run_until_complete(res2)
     assert res == 'foo'
     assert c['called'] == 1
     assert c['handler_called'] == 1

@@ -227,13 +227,33 @@ class Signal(object):
         if six.PY3:
             if asyncio.iscoroutine(ext_res):
                 coros.append(ext_res)
-
+            # when running in py3, the results are converted into a future
+            # that fulfills when all the results are computed
+            results = self._create_async_results(results, coros, loop)
             trans = transaction.get(None)
-            all_co = asyncio.gather(*coros, loop=loop)
             if trans:
-                trans.add(all_co)
-            results.append(all_co)
+                trans.add(results)
         return results
+
+    def _create_async_results(self, sync_results, async_results, loop):
+        """Crate a future that will be fullfilled when all the results, both sync and
+        async are computed. This is used only when running in py3.
+
+        If no async results need to be computed, the future fullfills immediately.
+        """
+        res = asyncio.Future(loop=loop)
+        if async_results:
+            gathering = asyncio.gather(*async_results, loop=loop)
+            def gather_cb(future):
+                try:
+                    sync_results.extend(future.result())
+                    res.set_result(sync_results)
+                except Exception as e:
+                    res.set_exception(e)
+            gathering.add_done_callback(gather_cb)
+        else:
+            res.set_result(sync_results)
+        return res
 
     def ext_publish(self, instance, loop, args, kwargs):
         """If 'external_signaller' is defined, calls it's publish method to
