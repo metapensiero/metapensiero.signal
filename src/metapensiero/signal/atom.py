@@ -132,6 +132,12 @@ class Signal(object):
                 result = self._fconnect(instance, cback, subscribers, _connect)
             else:
                 result = self._fconnect(cback, subscribers, _connect)
+            if six.PY3:
+                if asyncio.iscoroutine(result):
+                    result = asyncio.ensure_future(result)
+                trans = transaction.get(None)
+                if trans:
+                    trans.add(result)
         else:
             self._connect(subscribers, cback)
             result = None
@@ -157,6 +163,12 @@ class Signal(object):
                                            _disconnect)
             else:
                 result = self._fdisconnect(cback, subscribers, _disconnect)
+            if six.PY3:
+                if asyncio.iscoroutine(result):
+                    result = asyncio.ensure_future(result)
+                trans = transaction.get(None)
+                if trans:
+                    trans.add(result)
         else:
             self._disconnect(subscribers, cback)
             result = None
@@ -188,12 +200,20 @@ class Signal(object):
             # in the main class body and marked with @handler
             subscribers |= self._get_class_handlers(instance)
         if self._fnotify:
+            # if a notify wrapper is defined, defer notification to it,
+            # a callback to execute the default notification process
             def cback(*args, **kwargs):
                 return self._notify(subscribers, instance, loop, args, kwargs)
             if instance:
                 result = self._fnotify(instance, subscribers, cback, *args, **kwargs)
             else:
                 result = self._fnotify(subscribers, cback, *args, **kwargs)
+            if six.PY3:
+                if asyncio.iscoroutine(result):
+                    result = asyncio.ensure_future(result)
+                trans = transaction.get(None)
+                if trans:
+                    trans.add(result)
         else:
             result = self._notify(subscribers, instance, loop, args, kwargs)
         return result
