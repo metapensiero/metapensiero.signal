@@ -18,7 +18,6 @@ import pytest
 
 if six.PY3:
 
-
     class EventFactory:
         """An helper class that helps creating asyncio.Event instances and waiting for
         them.
@@ -57,9 +56,15 @@ if six.PY3:
 
         TimeoutError = asyncio.TimeoutError
 
+    @pytest.fixture(scope='session')
+    def loop():
+        l = asyncio.new_event_loop()
+        asyncio.set_event_loop(l)
+        return l
+
     @pytest.fixture(scope='function')
-    def events():
-        return EventFactory(asyncio.get_event_loop())
+    def events(loop):
+        return EventFactory(loop)
 else:
     @pytest.fixture(scope='function')
     def events():
