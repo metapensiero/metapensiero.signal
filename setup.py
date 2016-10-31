@@ -59,10 +59,17 @@ setup(
 
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    namespace_packages=['metapensiero',],
-
+    namespace_packages=['metapensiero'],
     install_requires=INSTALL_REQUIRES,
-    extras_require={'dev': ['metapensiero.tool.bump_version']},
+    extras_require={
+        'dev': [
+            'metapensiero.tool.bump_version',
+        ],
+        'test': [
+            'pytest',
+            'pytest-asyncio'
+        ]
+    },
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=['metapensiero.signal[test]'],
 )
