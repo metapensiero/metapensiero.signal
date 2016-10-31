@@ -224,7 +224,9 @@ class Signal(object):
         at class-definition time. If an external publish function is
         supplied, call it with the provided arguments at the end.
 
-        Returns a list with the results from the handlers execution.
+        Returns a list with the results from the handlers execution.  In Py3,
+        returns a future that will return a list of the results from the
+        handlers execution.
         """
         coros = []
         results = []
