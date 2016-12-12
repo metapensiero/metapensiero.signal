@@ -93,6 +93,7 @@ class Signal(object):
         self._fnotify = fnotify
         self._fconnect = fconnect
         self._fdisconnect = fdisconnect
+        self._iproxies = weakref.WeakKeyDictionary()
 
     @property
     def external_signaller(self):
@@ -295,7 +296,9 @@ class Signal(object):
 
     def __get__(self, instance, cls=None):
         if instance:
-            result = self.InstanceProxy(self, instance)
+            if instance not in self._iproxies:
+                self._iproxies[instance] = self.InstanceProxy(self, instance)
+            result = self._iproxies[instance]
         else:
             result = self
         return result
