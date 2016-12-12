@@ -76,6 +76,16 @@ class Signal(object):
                                       _loop=loop,
                                       **kwargs)
 
+        def notify_no_ext(self, *args, **kwargs):
+            "Like notify but avoid notifying external managers"
+            loop = kwargs.pop('loop', self.loop)
+            return self.signal.notify(*args,
+                                      _subscribers=self.subscribers,
+                                      _instance=self.instance,
+                                      _loop=loop,
+                                      _notify_external=False,
+                                      **kwargs)
+
         def clear(self):
             """Remove all the connected handlers, for this instance"""
             self.subscribers.clear()
@@ -188,6 +198,7 @@ class Signal(object):
         subscribers = kwargs.pop('_subscribers', None)
         instance = kwargs.pop('_instance', None)
         loop = kwargs.pop('_loop', None)
+        notify_external = kwargs.pop('_notify_external', True)
         # if i'm not called from an instance, use the default
         # subscribers
         if subscribers is None:
@@ -216,10 +227,12 @@ class Signal(object):
                 if trans:
                     trans.add(result)
         else:
-            result = self._notify(subscribers, instance, loop, args, kwargs)
+            result = self._notify(subscribers, instance, loop, args, kwargs,
+                                  notify_external=notify_external)
         return result
 
-    def _notify(self, subscribers, instance, loop, args, kwargs):
+    def _notify(self, subscribers, instance, loop, args, kwargs,
+                notify_external=True):
         """Call all the registered handlers with the arguments passed.
         If this signal is a class member, call also the handlers registered
         at class-definition time. If an external publish function is
@@ -246,7 +259,10 @@ class Signal(object):
                 raise
         loop = loop or self.loop
         # maybe do a round of external publishing
-        ext_res = self.ext_publish(instance, loop, args, kwargs)
+        if notify_external:
+            ext_res = self.ext_publish(instance, loop, args, kwargs)
+        else:
+            ext_res = None
         if six.PY3:
             if asyncio.iscoroutine(ext_res):
                 coros.append(ext_res)
