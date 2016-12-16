@@ -16,6 +16,7 @@ else:
 
 from functools import partial
 import logging
+import inspect
 import weakref
 
 if six.PY3:
@@ -147,7 +148,7 @@ class Signal(object):
                 if asyncio.iscoroutine(result):
                     result = asyncio.ensure_future(result)
                 trans = transaction.get(None)
-                if trans:
+                if trans and inspect.isawaitable(result):
                     trans.add(result)
         else:
             self._connect(subscribers, cback)
@@ -178,7 +179,7 @@ class Signal(object):
                 if asyncio.iscoroutine(result):
                     result = asyncio.ensure_future(result)
                 trans = transaction.get(None)
-                if trans:
+                if trans and inspect.isawaitable(result):
                     trans.add(result)
         else:
             self._disconnect(subscribers, cback)
@@ -224,7 +225,7 @@ class Signal(object):
                 if asyncio.iscoroutine(result):
                     result = asyncio.ensure_future(result)
                 trans = transaction.get(None)
-                if trans:
+                if trans and inspect.isawaitable(result):
                     trans.add(result)
         else:
             result = self._notify(subscribers, instance, loop, args, kwargs,
