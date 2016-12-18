@@ -218,7 +218,8 @@ class Signal(object):
             def cback(*args, **kwargs):
                 return self._notify(subscribers, instance, loop, args, kwargs)
             if instance:
-                result = self._fnotify(instance, subscribers, cback, *args, **kwargs)
+                result = self._fnotify(instance, subscribers, cback, *args,
+                                       **kwargs)
             else:
                 result = self._fnotify(subscribers, cback, *args, **kwargs)
             if six.PY3:
