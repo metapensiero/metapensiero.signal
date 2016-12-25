@@ -46,7 +46,6 @@ class Signal(object):
             self.signal = signal
             self.instance = instance
             self.subscribers = self.get_subscribers()
-            self.loop = getattr(self.instance, 'loop', None)
 
         def get_subscribers(self):
             """Get per-instance subscribers from the signal.
@@ -67,6 +66,10 @@ class Signal(object):
             return self.signal.disconnect(cback,
                                           subscribers=self.subscribers,
                                           instance=self.instance)
+
+        @property
+        def loop(self):
+            return getattr(self.instance, 'loop', None)
 
         def notify(self, *args, **kwargs):
             "See signal"
