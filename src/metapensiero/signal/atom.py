@@ -48,13 +48,9 @@ class Signal(object):
             self.instance = instance
             self.subscribers = self.get_subscribers()
 
-        def get_subscribers(self):
-            """Get per-instance subscribers from the signal.
-            """
-            data = self.signal.instance_subscribers
-            if self.instance not in data:
-                data[self.instance] = MethodAwareWeakSet()
-            return data[self.instance]
+        def clear(self):
+            """Remove all the connected handlers, for this instance"""
+            self.subscribers.clear()
 
         def connect(self, cback):
             "See signal"
@@ -67,6 +63,14 @@ class Signal(object):
             return self.signal.disconnect(cback,
                                           subscribers=self.subscribers,
                                           instance=self.instance)
+
+        def get_subscribers(self):
+            """Get per-instance subscribers from the signal.
+            """
+            data = self.signal.instance_subscribers
+            if self.instance not in data:
+                data[self.instance] = MethodAwareWeakSet()
+            return data[self.instance]
 
         @property
         def loop(self):
@@ -91,10 +95,6 @@ class Signal(object):
                                       _notify_external=False,
                                       **kwargs)
 
-        def clear(self):
-            """Remove all the connected handlers, for this instance"""
-            self.subscribers.clear()
-
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
                  loop=None, external=None):
         self.name = name
@@ -110,6 +110,14 @@ class Signal(object):
         self._fdisconnect = fdisconnect
         self._iproxies = weakref.WeakKeyDictionary()
 
+    def __get__(self, instance, cls=None):
+        if instance:
+            if instance not in self._iproxies:
+                self._iproxies[instance] = self.InstanceProxy(self, instance)
+            result = self._iproxies[instance]
+        else:
+            result = self
+        return result
 
     def _add_to_trans(self, *items, loop=None):
         loop = loop or self.loop
@@ -120,123 +128,48 @@ class Signal(object):
             res = trans.add(*items)
         return res
 
-    @property
-    def external_signaller(self):
-        return self._external_signaller
-
-    @external_signaller.setter
-    def external_signaller(self, value):
-        if value:
-            assert isinstance(value, ExternalSignaller)
-        self._external_signaller = value
-        if self._name and value:
-            value.register_signal(self, self._name)
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
-        if value and self._external_signaller:
-            self._external_signaller.register_signal(self, value)
-
-    def connect(self, cback, subscribers=None, instance=None):
-        """Add  a function or a method as an handler of this signal.
-        Any handler added can be a coroutine.
-        """
-        if subscribers is None:
-            subscribers = self.subscribers
-        # wrapper
-        if self._fconnect:
-            def _connect(cback):
-                self._connect(subscribers, cback)
-
-            _connect.notify = partial(self._notify_one, instance)
-            if instance:
-                result = self._fconnect(instance, cback, subscribers, _connect)
-            else:
-                result = self._fconnect(cback, subscribers, _connect)
-            if six.PY3 and isawaitable(result):
-                result = self._add_to_trans(result,
-                                            loop=self._loop_from_instance(instance))[0]
-        else:
-            self._connect(subscribers, cback)
-            result = None
-        return result
-
     def _connect(self, subscribers, cback):
         subscribers.add(cback)
 
-    def disconnect(self, cback, subscribers=None, instance=None):
-        """Remove a previously added function or method from the set of the
-        signal's handlers.
-        """
-        if subscribers is None:
-            subscribers = self.subscribers
-        # wrapper
-        if self._fdisconnect:
-            def _disconnect(cback):
-                self._disconnect(subscribers, cback)
+    def _create_async_results(self, sync_results, async_results, loop):
+        """Crate a future that will be fullfilled when all the results, both sync and
+        async are computed. This is used only when running in py3.
 
-            _disconnect.notify = partial(self._notify_one, instance)
-            if instance:
-                result = self._fdisconnect(instance, cback, subscribers,
-                                           _disconnect)
-            else:
-                result = self._fdisconnect(cback, subscribers, _disconnect)
-            if six.PY3 and isawaitable(result):
-                result = self._add_to_trans(result,
-                                            loop=self._loop_from_instance(instance))[0]
+        If no async results need to be computed, the future fullfills immediately.
+        """
+        res = asyncio.Future(loop=loop)
+        if async_results:
+            gathering = asyncio.gather(*async_results, loop=loop)
+            def gather_cb(future):
+                try:
+                    sync_results.extend(future.result())
+                    res.set_result(sync_results)
+                except Exception as e:
+                    res.set_exception(e)
+            gathering.add_done_callback(gather_cb)
         else:
-            self._disconnect(subscribers, cback)
-            result = None
-        return result
+            res.set_result(sync_results)
+        return res
 
     def _disconnect(self, subscribers, cback):
         if cback in subscribers:
             subscribers.remove(cback)
 
-    def notify(self, *args, **kwargs):
-        """Call all the registered handlers with the arguments passed. If a
-        notify wrapper is defined it is called with a notify callback
-        to really start the notification and a set of the registered
-        class-defined and per-instance subscribers.
+    def _get_class_handlers(self, instance):
+        """Returns the handlers registered at class level.
         """
-        subscribers = kwargs.pop('_subscribers', None)
-        instance = kwargs.pop('_instance', None)
-        loop = kwargs.pop('_loop', None)
-        notify_external = kwargs.pop('_notify_external', True)
-        # if i'm not called from an instance, use the default
-        # subscribers
-        if subscribers is None:
-            subscribers = set(self.subscribers)
+        # TODO: Move this to SignalAndHandlerInitMeta
+        cls = instance.__class__
+        handlers = cls._signal_handlers
+        return set(getattr(instance, hname) for hname, sig_name in
+                   six.iteritems(handlers) if sig_name == self.name)
+
+    def _loop_from_instance(self, instance):
+        if instance:
+            loop = self.__get__(instance).loop
         else:
-            # do not keep weaksets for the duration of the notification
-            subscribers = set(self.subscribers | subscribers)
-        if instance and self.name and isinstance(instance.__class__,
-                                                 SignalAndHandlerInitMeta):
-            # merge the set of instance-only handlers with those declared
-            # in the main class body and marked with @handler
-            subscribers |= self._get_class_handlers(instance)
-        if self._fnotify:
-            # if a notify wrapper is defined, defer notification to it,
-            # a callback to execute the default notification process
-            def cback(*args, **kwargs):
-                return self._notify(subscribers, instance, loop, args, kwargs)
-            if instance:
-                result = self._fnotify(instance, subscribers, cback, *args,
-                                       **kwargs)
-            else:
-                result = self._fnotify(subscribers, cback, *args, **kwargs)
-            if six.PY3 and isawaitable(result):
-                result = self._add_to_trans(result,
-                                            loop=self._loop_from_instance(instance))[0]
-        else:
-            result = self._notify(subscribers, instance, loop, args, kwargs,
-                                  notify_external=notify_external)
-        return result
+            loop = self.loop
+        return loop
 
     def _notify(self, subscribers, instance, loop, args, kwargs,
                 notify_external=True):
@@ -280,25 +213,62 @@ class Signal(object):
             results = self._create_async_results(results, coros, loop)
         return results
 
-    def _create_async_results(self, sync_results, async_results, loop):
-        """Crate a future that will be fullfilled when all the results, both sync and
-        async are computed. This is used only when running in py3.
-
-        If no async results need to be computed, the future fullfills immediately.
+    def connect(self, cback, subscribers=None, instance=None):
+        """Add  a function or a method as an handler of this signal.
+        Any handler added can be a coroutine.
         """
-        res = asyncio.Future(loop=loop)
-        if async_results:
-            gathering = asyncio.gather(*async_results, loop=loop)
-            def gather_cb(future):
-                try:
-                    sync_results.extend(future.result())
-                    res.set_result(sync_results)
-                except Exception as e:
-                    res.set_exception(e)
-            gathering.add_done_callback(gather_cb)
+        if subscribers is None:
+            subscribers = self.subscribers
+        # wrapper
+        if self._fconnect:
+            def _connect(cback):
+                self._connect(subscribers, cback)
+
+            _connect.notify = partial(self._notify_one, instance)
+            if instance:
+                result = self._fconnect(instance, cback, subscribers, _connect)
+            else:
+                result = self._fconnect(cback, subscribers, _connect)
+            if six.PY3 and isawaitable(result):
+                result = self._add_to_trans(result,
+                                            loop=self._loop_from_instance(instance))[0]
         else:
-            res.set_result(sync_results)
-        return res
+            self._connect(subscribers, cback)
+            result = None
+        return result
+
+    def _notify_one(self, instance, cback, *args, **kwargs):
+        loop = self._loop_from_instance(instance)
+        return self._notify(set((cback,)), instance, loop, args, kwargs)
+
+    def clear(self):
+        """Remove all the connected handlers"""
+        self.subscribers.clear()
+
+    def disconnect(self, cback, subscribers=None, instance=None):
+        """Remove a previously added function or method from the set of the
+        signal's handlers.
+        """
+        if subscribers is None:
+            subscribers = self.subscribers
+        # wrapper
+        if self._fdisconnect:
+            def _disconnect(cback):
+                self._disconnect(subscribers, cback)
+
+            _disconnect.notify = partial(self._notify_one, instance)
+            if instance:
+                result = self._fdisconnect(instance, cback, subscribers,
+                                           _disconnect)
+            else:
+                result = self._fdisconnect(cback, subscribers, _disconnect)
+            if six.PY3 and isawaitable(result):
+                result = self._add_to_trans(result,
+                                            loop=self._loop_from_instance(instance))[0]
+        else:
+            self._disconnect(subscribers, cback)
+            result = None
+        return result
 
     def ext_publish(self, instance, loop, args, kwargs):
         """If 'external_signaller' is defined, calls it's publish method to
@@ -309,34 +279,67 @@ class Signal(object):
             return self.external_signaller.publish_signal(self, instance, loop,
                                                           args, kwargs)
 
-    def _loop_from_instance(self, instance):
-        if instance:
-            loop = self.__get__(instance).loop
-        else:
-            loop = self.loop
-        return loop
+    @property
+    def external_signaller(self):
+        return self._external_signaller
 
-    def _notify_one(self, instance, cback, *args, **kwargs):
-        loop = self._loop_from_instance(instance)
-        return self._notify(set((cback,)), instance, loop, args, kwargs)
+    @external_signaller.setter
+    def external_signaller(self, value):
+        if value:
+            assert isinstance(value, ExternalSignaller)
+        self._external_signaller = value
+        if self._name and value:
+            value.register_signal(self, self._name)
 
-    def __get__(self, instance, cls=None):
-        if instance:
-            if instance not in self._iproxies:
-                self._iproxies[instance] = self.InstanceProxy(self, instance)
-            result = self._iproxies[instance]
-        else:
-            result = self
-        return result
+    @property
+    def name(self):
+        return self._name
 
-    def _get_class_handlers(self, instance):
-        """Returns the handlers registered at class level.
+    @name.setter
+    def name(self, value):
+        self._name = value
+        if value and self._external_signaller:
+            self._external_signaller.register_signal(self, value)
+
+    def notify(self, *args, **kwargs):
+        """Call all the registered handlers with the arguments passed. If a
+        notify wrapper is defined it is called with a notify callback
+        to really start the notification and a set of the registered
+        class-defined and per-instance subscribers.
         """
-        # TODO: Move this to SignalAndHandlerInitMeta
-        cls = instance.__class__
-        handlers = cls._signal_handlers
-        return set(getattr(instance, hname) for hname, sig_name in
-                   six.iteritems(handlers) if sig_name == self.name)
+        subscribers = kwargs.pop('_subscribers', None)
+        instance = kwargs.pop('_instance', None)
+        loop = kwargs.pop('_loop', None)
+        notify_external = kwargs.pop('_notify_external', True)
+        # if i'm not called from an instance, use the default
+        # subscribers
+        if subscribers is None:
+            subscribers = set(self.subscribers)
+        else:
+            # do not keep weaksets for the duration of the notification
+            subscribers = set(self.subscribers | subscribers)
+        if instance and self.name and isinstance(instance.__class__,
+                                                 SignalAndHandlerInitMeta):
+            # merge the set of instance-only handlers with those declared
+            # in the main class body and marked with @handler
+            subscribers |= self._get_class_handlers(instance)
+        if self._fnotify:
+            # if a notify wrapper is defined, defer notification to it,
+            # a callback to execute the default notification process
+            def cback(*args, **kwargs):
+                return self._notify(subscribers, instance, loop, args, kwargs)
+            if instance:
+                result = self._fnotify(instance, subscribers, cback, *args,
+                                       **kwargs)
+            else:
+                result = self._fnotify(subscribers, cback, *args, **kwargs)
+            if six.PY3 and isawaitable(result):
+                result = self._add_to_trans(result,
+                                            loop=self._loop_from_instance(instance))[0]
+        else:
+            result = self._notify(subscribers, instance, loop, args, kwargs,
+                                  notify_external=notify_external)
+        return result
 
     def on_connect(self, fconnect):
         "On connect optional wrapper decorator"
@@ -347,7 +350,3 @@ class Signal(object):
         "On disconnect optional wrapper decorator"
         self._fdisconnect = fdisconnect
         return self
-
-    def clear(self):
-        """Remove all the connected handlers"""
-        self.subscribers.clear()
