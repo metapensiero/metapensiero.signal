@@ -28,6 +28,7 @@ from .weak import MethodAwareWeakSet
 from . import ExternalSignaller
 from . import SignalAndHandlerInitMeta
 
+
 logger = logging.getLogger(__name__)
 
 
