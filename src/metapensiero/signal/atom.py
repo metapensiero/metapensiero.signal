@@ -16,7 +16,6 @@ else:
 
 from functools import partial
 import logging
-import inspect
 import weakref
 
 if six.PY3:
@@ -24,6 +23,7 @@ if six.PY3:
 else:
     transaction = None
 
+from .compat import isawaitable
 from .weak import MethodAwareWeakSet
 from . import ExternalSignaller
 from . import SignalAndHandlerInitMeta
@@ -110,6 +110,16 @@ class Signal(object):
         self._fdisconnect = fdisconnect
         self._iproxies = weakref.WeakKeyDictionary()
 
+
+    def _add_to_trans(self, *items, loop=None):
+        loop = loop or self.loop
+        trans = transaction.get(None, loop=loop) if transaction else None
+        if not trans:
+            res = list(map(partial(asyncio.ensure_future, loop=loop), items))
+        else:
+            res = trans.add(*items)
+        return res
+
     @property
     def external_signaller(self):
         return self._external_signaller
@@ -148,12 +158,9 @@ class Signal(object):
                 result = self._fconnect(instance, cback, subscribers, _connect)
             else:
                 result = self._fconnect(cback, subscribers, _connect)
-            if six.PY3:
-                if asyncio.iscoroutine(result):
-                    result = asyncio.ensure_future(result)
-                trans = transaction.get(None)
-                if trans and inspect.isawaitable(result):
-                    trans.add(result)
+            if six.PY3 and isawaitable(result):
+                result = self._add_to_trans(result,
+                                            loop=self._loop_from_instance(instance))[0]
         else:
             self._connect(subscribers, cback)
             result = None
@@ -179,12 +186,9 @@ class Signal(object):
                                            _disconnect)
             else:
                 result = self._fdisconnect(cback, subscribers, _disconnect)
-            if six.PY3:
-                if asyncio.iscoroutine(result):
-                    result = asyncio.ensure_future(result)
-                trans = transaction.get(None)
-                if trans and inspect.isawaitable(result):
-                    trans.add(result)
+            if six.PY3 and isawaitable(result):
+                result = self._add_to_trans(result,
+                                            loop=self._loop_from_instance(instance))[0]
         else:
             self._disconnect(subscribers, cback)
             result = None
@@ -226,12 +230,9 @@ class Signal(object):
                                        **kwargs)
             else:
                 result = self._fnotify(subscribers, cback, *args, **kwargs)
-            if six.PY3:
-                if asyncio.iscoroutine(result):
-                    result = asyncio.ensure_future(result)
-                trans = transaction.get(None)
-                if trans and inspect.isawaitable(result):
-                    trans.add(result)
+            if six.PY3 and isawaitable(result):
+                result = self._add_to_trans(result,
+                                            loop=self._loop_from_instance(instance))[0]
         else:
             result = self._notify(subscribers, instance, loop, args, kwargs,
                                   notify_external=notify_external)
@@ -254,7 +255,7 @@ class Signal(object):
             try:
                 res = method(*args, **kwargs)
                 if six.PY3:
-                    if asyncio.iscoroutine(res):
+                    if isawaitable(res):
                         coros.append(res)
                     else:
                         results.append(res)
@@ -265,19 +266,18 @@ class Signal(object):
                 raise
         loop = loop or self.loop
         # maybe do a round of external publishing
-        if notify_external:
+        if notify_external and self.external_signaller:
             ext_res = self.ext_publish(instance, loop, args, kwargs)
-        else:
-            ext_res = None
+            if six.PY3:
+                if isawaitable(ext_res):
+                    coros.append(ext_res)
+                else:
+                    results.append(ext_res)
         if six.PY3:
-            if asyncio.iscoroutine(ext_res):
-                coros.append(ext_res)
             # when running in py3, the results are converted into a future
             # that fulfills when all the results are computed
+            coros = self._add_to_trans(*coros, loop=loop)
             results = self._create_async_results(results, coros, loop)
-            trans = transaction.get(None)
-            if trans:
-                trans.add(results)
         return results
 
     def _create_async_results(self, sync_results, async_results, loop):
@@ -309,11 +309,15 @@ class Signal(object):
             return self.external_signaller.publish_signal(self, instance, loop,
                                                           args, kwargs)
 
-    def _notify_one(self, instance, cback, *args, **kwargs):
+    def _loop_from_instance(self, instance):
         if instance:
             loop = self.__get__(instance).loop
         else:
-            loop = None
+            loop = self.loop
+        return loop
+
+    def _notify_one(self, instance, cback, *args, **kwargs):
+        loop = self._loop_from_instance(instance)
         return self._notify(set((cback,)), instance, loop, args, kwargs)
 
     def __get__(self, instance, cls=None):
