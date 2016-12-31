@@ -213,6 +213,10 @@ class Signal(object):
             results = self._create_async_results(results, coros, loop)
         return results
 
+    def _notify_one(self, instance, cback, *args, **kwargs):
+        loop = self._loop_from_instance(instance)
+        return self._notify(set((cback,)), instance, loop, args, kwargs)
+
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
         Any handler added can be a coroutine.
@@ -236,10 +240,6 @@ class Signal(object):
             self._connect(subscribers, cback)
             result = None
         return result
-
-    def _notify_one(self, instance, cback, *args, **kwargs):
-        loop = self._loop_from_instance(instance)
-        return self._notify(set((cback,)), instance, loop, args, kwargs)
 
     def clear(self):
         """Remove all the connected handlers"""
