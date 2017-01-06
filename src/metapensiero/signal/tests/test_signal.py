@@ -685,3 +685,34 @@ def test_15_external_signaller_filters_handlers():
 
     assert A._ext_handlers == {'handler2': 'myext.dbclick'}
     assert A._signal_handlers == {'handler1': 'click'}
+
+
+def test_16_dot_handlers(events):
+
+    if six.PY3:
+        from metapensiero.asyncio import transaction
+
+    @six.add_metaclass(SignalAndHandlerInitMeta)
+    class A(object):
+
+        me = Signal()
+        me.name = '.'
+
+        def __init__(self):
+            self.called = False
+
+        @handler('.')
+        def onme(self, arg, kw):
+            self.called = (arg, kw)
+
+    a1 = A()
+
+    assert a1.called is False
+
+    res = a1.me.notify(1, kw='a')
+    if six.PY3:
+        trans = transaction.begin()
+    assert a1.called == (1, 'a')
+    if six.PY3:
+        events.loop.run_until_complete(res)
+        events.loop.run_until_complete(trans.end())
