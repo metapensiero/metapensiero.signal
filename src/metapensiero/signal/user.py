@@ -75,7 +75,11 @@ class SignalAndHandlerInitMeta(type):
         signaller = cls._external_signaller_and_handler
         for aname, avalue in six.iteritems(namespace):
             if isinstance(avalue, Signal):
-                avalue.name = aname
+                if avalue.name is not None:
+                    aname = avalue.name
+                    assert aname not in signals
+                else:
+                    avalue.name = aname
                 if signaller:
                     avalue.external_signaller = signaller
                 signals[aname] = avalue
