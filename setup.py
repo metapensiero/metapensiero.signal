@@ -58,7 +58,8 @@ setup(
         ],
     keywords='signal event asyncio framework',
 
-    packages=find_packages('src'),
+    packages=['metapensiero.' + pkg
+              for pkg in find_packages('src/metapensiero')],
     package_dir={'': 'src'},
     namespace_packages=['metapensiero'],
     install_requires=INSTALL_REQUIRES,
