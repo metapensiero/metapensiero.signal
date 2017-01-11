@@ -66,44 +66,6 @@ class SignalAndHandlerInitMeta(type):
         cls._signals = signals
         cls._signal_handlers = handlers
 
-    def _find_local_signals(cls, signals,  namespace):
-        """Add name info to every "local" (present in the body of this class)
-        signal and add it to the mapping.  Also complete signal
-        initialization as member of the class by injecting its name.
-        """
-        from . import Signal
-        signaller = cls._external_signaller_and_handler
-        for aname, avalue in six.iteritems(namespace):
-            if isinstance(avalue, Signal):
-                if avalue.name:
-                    aname = avalue.name
-                else:
-                    avalue.name = aname
-                assert aname not in signals
-                if signaller:
-                    avalue.external_signaller = signaller
-                signals[aname] = avalue
-
-    def _find_local_handlers(cls, handlers,  namespace):
-        """Add name info to every "local" (present in the body of this class)
-        handler and add it to the mapping.
-        """
-        for aname, avalue in six.iteritems(namespace):
-            sig_name = cls._is_handler(aname, avalue)
-            if sig_name:
-                handlers[aname] = sig_name
-
-    def _check_local_handlers(cls, signals, handlers, namespace):
-        """For every marked handler, see if there is a suitable signal. If
-        not, raise an error."""
-        for aname, sig_name in six.iteritems(handlers):
-            # WARN: this code doesn't take in account the case where a new
-            # method with the same name of an handler in a base class is
-            # present in this class but it isn't an handler (so the handler
-            # with the same name should be removed from the handlers)
-            if sig_name not in signals:
-                raise SignalError("Cannot find a signal named '%s'" % sig_name)
-
     def _build_inheritation_chain(cls, bases, *names):
         """For all of the names build a ChainMap containing a map for every
         base class."""
@@ -135,6 +97,44 @@ class SignalAndHandlerInitMeta(type):
                 sig_handlers = res[sig_name] = []
             sig_handlers.append(getattr(instance, member_name))
         return res
+
+    def _check_local_handlers(cls, signals, handlers, namespace):
+        """For every marked handler, see if there is a suitable signal. If
+        not, raise an error."""
+        for aname, sig_name in six.iteritems(handlers):
+            # WARN: this code doesn't take in account the case where a new
+            # method with the same name of an handler in a base class is
+            # present in this class but it isn't an handler (so the handler
+            # with the same name should be removed from the handlers)
+            if sig_name not in signals:
+                raise SignalError("Cannot find a signal named '%s'" % sig_name)
+
+    def _find_local_signals(cls, signals,  namespace):
+        """Add name info to every "local" (present in the body of this class)
+        signal and add it to the mapping.  Also complete signal
+        initialization as member of the class by injecting its name.
+        """
+        from . import Signal
+        signaller = cls._external_signaller_and_handler
+        for aname, avalue in six.iteritems(namespace):
+            if isinstance(avalue, Signal):
+                if avalue.name:
+                    aname = avalue.name
+                else:
+                    avalue.name = aname
+                assert aname not in signals
+                if signaller:
+                    avalue.external_signaller = signaller
+                signals[aname] = avalue
+
+    def _find_local_handlers(cls, handlers,  namespace):
+        """Add name info to every "local" (present in the body of this class)
+        handler and add it to the mapping.
+        """
+        for aname, avalue in six.iteritems(namespace):
+            sig_name = cls._is_handler(aname, avalue)
+            if sig_name:
+                handlers[aname] = sig_name
 
     def instance_signals_and_handlers(cls, instance):
         """Calculate per-instance signals and handlers."""
