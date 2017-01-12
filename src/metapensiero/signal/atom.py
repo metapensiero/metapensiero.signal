@@ -24,7 +24,7 @@ else:
     transaction = None
 
 from .compat import isawaitable
-from .weak import MethodAwareWeakSet
+from .weak import MethodAwareWeakKeyOrderedDict
 from . import ExternalSignaller
 from . import SignalAndHandlerInitMeta
 
@@ -69,7 +69,7 @@ class Signal(object):
             """
             data = self.signal.instance_subscribers
             if self.instance not in data:
-                data[self.instance] = MethodAwareWeakSet()
+                data[self.instance] = MethodAwareWeakKeyOrderedDict()
             return data[self.instance]
 
         @property
@@ -98,7 +98,7 @@ class Signal(object):
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
                  loop=None, external=None):
         self.name = name
-        self.subscribers = MethodAwareWeakSet()
+        self.subscribers = MethodAwareWeakKeyOrderedDict()
         if six.PY3:
             self.loop = loop or asyncio.get_event_loop()
         else:
@@ -129,7 +129,7 @@ class Signal(object):
         return res
 
     def _connect(self, subscribers, cback):
-        subscribers.add(cback)
+        subscribers[cback] = True
 
     def _create_async_results(self, sync_results, async_results, loop):
         """Crate a future that will be fullfilled when all the results, both sync and
@@ -153,7 +153,7 @@ class Signal(object):
 
     def _disconnect(self, subscribers, cback):
         if cback in subscribers:
-            subscribers.remove(cback)
+            del subscribers[cback]
 
     def _get_class_handlers(self, instance):
         """Returns the handlers registered at class level.
@@ -311,18 +311,30 @@ class Signal(object):
         instance = kwargs.pop('_instance', None)
         loop = kwargs.pop('_loop', None)
         notify_external = kwargs.pop('_notify_external', True)
-        # if i'm not called from an instance, use the default
-        # subscribers
-        if subscribers is None:
-            subscribers = set(self.subscribers)
-        else:
-            # do not keep weaksets for the duration of the notification
-            subscribers = set(self.subscribers | subscribers)
+        # merge callbacks added to the class level with those added to the
+        # instance, giving the formers precedence while preserving overall order
+        self_subscribers = self.subscribers.copy()
+        # add in callbacks declared in the main class body and marked with
+        # @handler
         if instance and self.name and isinstance(instance.__class__,
                                                  SignalAndHandlerInitMeta):
-            # merge the set of instance-only handlers with those declared
-            # in the main class body and marked with @handler
-            subscribers |= self._get_class_handlers(instance)
+            class_handlers = self._get_class_handlers(instance)
+            for ch in class_handlers:
+                # eventual methods are ephemeral and normally the following
+                # condition would always be True for methods but the dict used
+                # has logic to take that into account
+                if ch not in self_subscribers:
+                    self_subscribers[ch] = True
+        # add in the other instance level callbacks added at runtime
+        if subscribers is not None:
+            for el in subscribers.keys():
+                # eventual methods are ephemeral and normally the following
+                # condition would always be True for methods but the dict used
+                # has logic to take that into account
+                if el not in self_subscribers:
+                    self_subscribers[el] = True
+        # finally get a list of the keys, that's all we need
+        subscribers = list(self_subscribers.keys())
         if self._fnotify:
             # if a notify wrapper is defined, defer notification to it,
             # a callback to execute the default notification process
