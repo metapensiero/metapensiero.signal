@@ -14,6 +14,7 @@ if six.PY3:
 else:
     asyncio = None
 
+import contextlib
 from functools import partial
 import logging
 import weakref
@@ -164,6 +165,16 @@ class Signal(object):
         return set(getattr(instance, hname) for hname, sig_name in
                    six.iteritems(handlers) if sig_name == self.name)
 
+    @contextlib.contextmanager
+    def _in_transaction(self, task, loop=None):
+        loop = loop or self.loop
+        trans = transaction.get(None, loop=self.loop, task=task)
+        if trans:
+            trans.__enter__()
+        yield trans
+        if trans:
+            trans.__exit__(None, None, None)
+
     def _loop_from_instance(self, instance):
         if instance:
             loop = self.__get__(instance).loop
@@ -182,6 +193,29 @@ class Signal(object):
         returns a future that will return a list of the results from the
         handlers execution.
         """
+        run_async = kwargs.pop('run_async', False)
+        if run_async and loop:
+            res =  self._notify_async(subscribers, instance, loop, args, kwargs,
+                                      notify_external)
+        else:
+            res = self._notify_sync(subscribers, instance, loop, args, kwargs,
+                                    notify_external)
+        return res
+
+    def _notify_async(self, subscribers, instance, loop, args, kwargs,
+                notify_external=True):
+        """See _notify"""
+        fut = loop.create_future()
+        def _notify_soon():
+            with self._in_transaction(fut, loop):
+                fut.set_result(self._notify_sync(subscribers, instance, loop,
+                                                 args, kwargs, notify_external))
+        loop.call_soon(_notify_soon)
+        return fut
+
+    def _notify_sync(self, subscribers, instance, loop, args, kwargs,
+                notify_external=True):
+        """See _notify"""
         coros = []
         results = []
         for method in subscribers:
