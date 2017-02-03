@@ -245,11 +245,20 @@ class Signal(object):
             # that fulfills when all the results are computed
             coros = self._add_to_trans(*coros, loop=loop)
             results = self._create_async_results(results, coros, loop)
+            results.add_done_callback(partial(self._print_error_cback, instance))
         return results
 
     def _notify_one(self, instance, cback, *args, **kwargs):
         loop = self._loop_from_instance(instance)
         return self._notify(set((cback,)), instance, loop, args, kwargs)
+
+    def _print_error_cback(self, instance, future):
+        if future.exception():
+            try:
+                future.result()
+            except Exception as e:
+                logger.exception("Error occurred while running event "
+                                 "callbacks for '%s' on %r", self.name, instance)
 
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
