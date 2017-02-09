@@ -112,7 +112,7 @@ class Signal(object):
         self._iproxies = weakref.WeakKeyDictionary()
 
     def __get__(self, instance, cls=None):
-        if instance:
+        if instance is not None:
             if instance not in self._iproxies:
                 self._iproxies[instance] = self.InstanceProxy(self, instance)
             result = self._iproxies[instance]
@@ -122,8 +122,11 @@ class Signal(object):
 
     def _add_to_trans(self, *items, loop=None):
         loop = loop or self.loop
-        trans = transaction.get(None, loop=loop) if transaction else None
-        if not trans:
+        if transaction is not None:
+            trans = transaction.get(None, loop=loop)
+        else:
+            trans = None
+        if trans is None:
             res = list(map(partial(asyncio.ensure_future, loop=loop), items))
         else:
             res = trans.add(*items)
@@ -169,17 +172,17 @@ class Signal(object):
     def _in_transaction(self, task, loop=None):
         loop = loop or self.loop
         trans = transaction.get(None, loop=self.loop, task=task)
-        if trans:
+        if trans is not None:
             trans.__enter__()
         yield trans
-        if trans:
+        if trans is not None:
             trans.__exit__(None, None, None)
 
     def _loop_from_instance(self, instance):
-        if instance:
-            loop = self.__get__(instance).loop
-        else:
+        if instance is None:
             loop = self.loop
+        else:
+            loop = self.__get__(instance).loop
         return loop
 
     def _notify(self, subscribers, instance, loop, args, kwargs,
@@ -194,7 +197,7 @@ class Signal(object):
         handlers execution.
         """
         run_async = kwargs.pop('run_async', False)
-        if run_async and loop:
+        if run_async and loop is not None:
             res =  self._notify_async(subscribers, instance, loop, args, kwargs,
                                       notify_external)
         else:
@@ -233,7 +236,7 @@ class Signal(object):
                 raise
         loop = loop or self.loop
         # maybe do a round of external publishing
-        if notify_external and self.external_signaller:
+        if notify_external and self.external_signaller is not None:
             ext_res = self.ext_publish(instance, loop, args, kwargs)
             if six.PY3:
                 if isawaitable(ext_res):
@@ -267,12 +270,12 @@ class Signal(object):
         if subscribers is None:
             subscribers = self.subscribers
         # wrapper
-        if self._fconnect:
+        if self._fconnect is not None:
             def _connect(cback):
                 self._connect(subscribers, cback)
 
             _connect.notify = partial(self._notify_one, instance)
-            if instance:
+            if instance is not None:
                 result = self._fconnect(instance, cback, subscribers, _connect)
             else:
                 result = self._fconnect(cback, subscribers, _connect)
@@ -295,12 +298,12 @@ class Signal(object):
         if subscribers is None:
             subscribers = self.subscribers
         # wrapper
-        if self._fdisconnect:
+        if self._fdisconnect is not None:
             def _disconnect(cback):
                 self._disconnect(subscribers, cback)
 
             _disconnect.notify = partial(self._notify_one, instance)
-            if instance:
+            if instance is not None:
                 result = self._fdisconnect(instance, cback, subscribers,
                                            _disconnect)
             else:
@@ -317,7 +320,7 @@ class Signal(object):
         """If 'external_signaller' is defined, calls it's publish method to
         notify external event systems.
         """
-        if self.external_signaller:
+        if self.external_signaller is not None:
             # Assumes that the loop is managed by the external handler
             return self.external_signaller.publish_signal(self, instance, loop,
                                                           args, kwargs)
@@ -328,7 +331,7 @@ class Signal(object):
 
     @external_signaller.setter
     def external_signaller(self, value):
-        if value:
+        if value is not None:
             assert isinstance(value, ExternalSignaller)
         self._external_signaller = value
         if self._name and value:
@@ -341,7 +344,7 @@ class Signal(object):
     @name.setter
     def name(self, value):
         self._name = value
-        if value and self._external_signaller:
+        if value is not None and self._external_signaller:
             self._external_signaller.register_signal(self, value)
 
     def notify(self, *args, **kwargs):
@@ -359,8 +362,8 @@ class Signal(object):
         self_subscribers = self.subscribers.copy()
         # add in callbacks declared in the main class body and marked with
         # @handler
-        if instance and self.name and isinstance(instance.__class__,
-                                                 SignalAndHandlerInitMeta):
+        if instance is not None and self.name and isinstance(instance.__class__,
+                                                    SignalAndHandlerInitMeta):
             class_handlers = self._get_class_handlers(instance)
             for ch in class_handlers:
                 # eventual methods are ephemeral and normally the following
@@ -378,12 +381,12 @@ class Signal(object):
                     self_subscribers[el] = True
         # finally get a list of the keys, that's all we need
         subscribers = list(self_subscribers.keys())
-        if self._fnotify:
+        if self._fnotify is not None:
             # if a notify wrapper is defined, defer notification to it,
             # a callback to execute the default notification process
             def cback(*args, **kwargs):
                 return self._notify(subscribers, instance, loop, args, kwargs)
-            if instance:
+            if instance is not None:
                 result = self._fnotify(instance, subscribers, cback, *args,
                                        **kwargs)
             else:
