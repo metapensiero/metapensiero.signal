@@ -5,14 +5,7 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-from __future__ import unicode_literals, absolute_import
-
-import six
-
-if six.PY3:
-    from collections import ChainMap
-else:
-    ChainMap = None
+from collections import ChainMap
 
 from .external import ExternalSignallerAndHandler
 from . import SignalError
@@ -70,27 +63,15 @@ class SignalAndHandlerInitMeta(type):
         """For all of the names build a ChainMap containing a map for every
         base class."""
         result = []
-        # chainmaps aren't available on PY2
-        if six.PY3:
-            for name in names:
-                result.append(ChainMap({}, *(getattr(base, name, {}) for
-                                             base in bases)))
-        else:
-            bases = list(bases)
-            bases.reverse()
-            for name in names:
-                reg = {}
-                for base in bases:
-                    base_reg = getattr(base, name, None)
-                    if base_reg:
-                        reg.update(base_reg)
-                result.append(reg)
+        for name in names:
+            result.append(ChainMap({}, *(getattr(base, name, {}) for
+                                         base in bases)))
         return result
 
     def _build_instance_handler_mapping(cls, instance, handle_d):
         """For every unbounded handler, get the bounded version."""
         res = {}
-        for member_name, sig_name in six.iteritems(handle_d):
+        for member_name, sig_name in handle_d.items():
             if sig_name in res:
                 sig_handlers = res[sig_name]
             else:
@@ -101,7 +82,7 @@ class SignalAndHandlerInitMeta(type):
     def _check_local_handlers(cls, signals, handlers, namespace):
         """For every marked handler, see if there is a suitable signal. If
         not, raise an error."""
-        for aname, sig_name in six.iteritems(handlers):
+        for aname, sig_name in handlers.items():
             # WARN: this code doesn't take in account the case where a new
             # method with the same name of an handler in a base class is
             # present in this class but it isn't an handler (so the handler
@@ -116,7 +97,7 @@ class SignalAndHandlerInitMeta(type):
         """
         from . import Signal
         signaller = cls._external_signaller_and_handler
-        for aname, avalue in six.iteritems(namespace):
+        for aname, avalue in namespace.items():
             if isinstance(avalue, Signal):
                 if avalue.name:
                     aname = avalue.name
@@ -131,7 +112,7 @@ class SignalAndHandlerInitMeta(type):
         """Add name info to every "local" (present in the body of this class)
         handler and add it to the mapping.
         """
-        for aname, avalue in six.iteritems(namespace):
+        for aname, avalue in namespace.items():
             sig_name = cls._is_handler(aname, avalue)
             if sig_name:
                 handlers[aname] = sig_name
@@ -150,7 +131,4 @@ class SignalAndHandlerInitMeta(type):
     def with_external(mclass, external, name=None):
         assert isinstance(external, ExternalSignallerAndHandler)
         name = name or "ExternalSignalAndHandlerInitMeta"
-        if six.PY2:
-            # Py2 needs a string
-            name = str(name)
         return type(name, (mclass,), {'_external_signaller_and_handler': external})

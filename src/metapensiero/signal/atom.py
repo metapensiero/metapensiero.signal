@@ -5,24 +5,13 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-from __future__ import unicode_literals, absolute_import
-
-import six
-
-if six.PY3:
-    import asyncio
-else:
-    asyncio = None
-
+import asyncio
 import contextlib
 from functools import partial
 import logging
 import weakref
 
-if six.PY3:
-    from metapensiero.asyncio import transaction
-else:
-    transaction = None
+from metapensiero.asyncio import transaction
 
 from .compat import isawaitable
 from .weak import MethodAwareWeakKeyOrderedDict
@@ -100,10 +89,7 @@ class Signal(object):
                  loop=None, external=None):
         self.name = name
         self.subscribers = MethodAwareWeakKeyOrderedDict()
-        if six.PY3:
-            self.loop = loop or asyncio.get_event_loop()
-        else:
-            self.loop = None
+        self.loop = loop or asyncio.get_event_loop()
         self.instance_subscribers = weakref.WeakKeyDictionary()
         self.external_signaller = external
         self._fnotify = fnotify
@@ -224,11 +210,8 @@ class Signal(object):
         for method in subscribers:
             try:
                 res = method(*args, **kwargs)
-                if six.PY3:
-                    if isawaitable(res):
-                        coros.append(res)
-                    else:
-                        results.append(res)
+                if isawaitable(res):
+                    coros.append(res)
                 else:
                     results.append(res)
             except:
@@ -238,17 +221,13 @@ class Signal(object):
         # maybe do a round of external publishing
         if notify_external and self.external_signaller is not None:
             ext_res = self.ext_publish(instance, loop, args, kwargs)
-            if six.PY3:
-                if isawaitable(ext_res):
-                    coros.append(ext_res)
-                else:
-                    results.append(ext_res)
-        if six.PY3:
-            # when running in py3, the results are converted into a future
-            # that fulfills when all the results are computed
-            coros = self._add_to_trans(*coros, loop=loop)
-            results = self._create_async_results(results, coros, loop)
-            results.add_done_callback(partial(self._print_error_cback, instance))
+            if isawaitable(ext_res):
+                coros.append(ext_res)
+        # the results are converted into a future that fulfills when all
+        # the results are computed
+        coros = self._add_to_trans(*coros, loop=loop)
+        results = self._create_async_results(results, coros, loop)
+        results.add_done_callback(partial(self._print_error_cback, instance))
         return results
 
     def _notify_one(self, instance, cback, *args, **kwargs):
@@ -279,7 +258,7 @@ class Signal(object):
                 result = self._fconnect(instance, cback, subscribers, _connect)
             else:
                 result = self._fconnect(cback, subscribers, _connect)
-            if six.PY3 and isawaitable(result):
+            if isawaitable(result):
                 result = self._add_to_trans(result,
                                             loop=self._loop_from_instance(instance))[0]
         else:
@@ -308,7 +287,7 @@ class Signal(object):
                                            _disconnect)
             else:
                 result = self._fdisconnect(cback, subscribers, _disconnect)
-            if six.PY3 and isawaitable(result):
+            if isawaitable(result):
                 result = self._add_to_trans(result,
                                             loop=self._loop_from_instance(instance))[0]
         else:
@@ -391,7 +370,7 @@ class Signal(object):
                                        **kwargs)
             else:
                 result = self._fnotify(subscribers, cback, *args, **kwargs)
-            if six.PY3 and isawaitable(result):
+            if isawaitable(result):
                 result = self._add_to_trans(result,
                                             loop=self._loop_from_instance(instance))[0]
         else:
