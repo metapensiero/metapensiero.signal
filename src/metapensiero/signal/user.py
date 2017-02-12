@@ -5,7 +5,7 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 
 from .external import ExternalSignallerAndHandler
 from . import SignalError
@@ -17,23 +17,27 @@ SPEC_CONTAINER_MEMBER_NAME = '_publish'
 class SignalNameHandlerDecorator(object):
     "A decorator used to mark a method as handler for a particular signal."
 
-    def __init__(self, signal_name):
+    def __init__(self, signal_name, **config):
         self.signal_name = signal_name
+        self.config = config
 
     def __call__(self, method):
         setattr(method, SPEC_CONTAINER_MEMBER_NAME,
-                {'kind': 'handler', 'name': self.signal_name})
+                {'kind': 'handler', 'name': self.signal_name,
+                 'config': self.config})
         return method
 
     @classmethod
     def is_handler(cls, name, value):
         """Detect an handler and return its wanted signal name."""
         signal_name = False
+        config = None
         if callable(value) and hasattr(value, SPEC_CONTAINER_MEMBER_NAME):
                 spec = getattr(value, SPEC_CONTAINER_MEMBER_NAME)
                 if spec['kind'] == 'handler':
                     signal_name = spec['name']
-        return signal_name
+                    config = spec['config']
+        return signal_name, config
 
 handler = SignalNameHandlerDecorator
 
@@ -43,19 +47,32 @@ class SignalAndHandlerInitMeta(type):
 
     _is_handler = SignalNameHandlerDecorator.is_handler
     _external_signaller_and_handler = None
+    """Optional `ExternalSignaller` instance that connects to external event
+    systems."""
+    _signals = None
+    """Container for signal definitions."""
+    _signal_handlers = None
+    """Container for handlers definitions."""
+    _signal_handlers_sorted = None
+    """Contains a Dict[signal_name, handlers] with sorted handlers."""
+    _signal_configs = None
+    """Container for additional handler config."""
 
     def __init__(cls, name, bases, namespace):
         super(SignalAndHandlerInitMeta, cls).__init__(name, bases, namespace)
         # collect signals and handlers from the bases, overwriting them from
         # right to left
         signaller = cls._external_signaller_and_handler
-        signals, handlers = cls._build_inheritation_chain(bases, '_signals',
-                                                          '_signal_handlers')
+        signals, handlers, configs = cls._build_inheritation_chain(bases,
+            '_signals', '_signal_handlers', '_signal_configs')
+
         cls._find_local_signals(signals, namespace)
-        cls._find_local_handlers(handlers, namespace)
+        cls._find_local_handlers(handlers, namespace, configs)
+        cls._signal_handlers_sorted = cls._sort_handlers(handlers, configs)
         if signaller:
             signaller.register_class(cls, bases, namespace, signals, handlers)
         cls._check_local_handlers(signals, handlers, namespace)
+
         cls._signals = signals
         cls._signal_handlers = handlers
 
@@ -108,14 +125,33 @@ class SignalAndHandlerInitMeta(type):
                     avalue.external_signaller = signaller
                 signals[aname] = avalue
 
-    def _find_local_handlers(cls, handlers,  namespace):
+    def _find_local_handlers(cls, handlers,  namespace, configs):
         """Add name info to every "local" (present in the body of this class)
         handler and add it to the mapping.
         """
         for aname, avalue in namespace.items():
-            sig_name = cls._is_handler(aname, avalue)
+            sig_name, config = cls._is_handler(aname, avalue)
             if sig_name:
+                configs[aname] = config
                 handlers[aname] = sig_name
+
+    def _get_class_handlers(cls, signal_name, instance):
+        """Returns the handlers registered at class level.
+        """
+        handlers = cls._signal_handlers_sorted[signal_name]
+        return [getattr(instance, hname) for hname in handlers]
+
+    def _sort_handlers(cls, handlers, configs):
+        """Sort class defined handlers to give precedence to those declared at lower
+        level. ``config`` is unused for now but will be considered for future
+        expansions.
+        """
+        per_signal = defaultdict(list)
+        for m in reversed(handlers.maps):
+            for hname, sig_name in handlers.items():
+                if hname not in per_signal[sig_name]:
+                    per_signal[sig_name].append(hname)
+        return per_signal
 
     def instance_signals_and_handlers(cls, instance):
         """Calculate per-instance signals and handlers."""

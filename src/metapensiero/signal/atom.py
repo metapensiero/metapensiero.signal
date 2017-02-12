@@ -145,15 +145,6 @@ class Signal(object):
         if cback in subscribers:
             del subscribers[cback]
 
-    def _get_class_handlers(self, instance):
-        """Returns the handlers registered at class level.
-        """
-        # TODO: Move this to SignalAndHandlerInitMeta
-        cls = instance.__class__
-        handlers = cls._signal_handlers
-        return set(getattr(instance, hname) for hname, sig_name in
-                   six.iteritems(handlers) if sig_name == self.name)
-
     @contextlib.contextmanager
     def _in_transaction(self, task, loop=None):
         loop = loop or self.loop
@@ -343,7 +334,7 @@ class Signal(object):
         # @handler
         if instance is not None and self.name and isinstance(instance.__class__,
                                                     SignalAndHandlerInitMeta):
-            class_handlers = self._get_class_handlers(instance)
+            class_handlers = type(instance)._get_class_handlers(self.name, instance)
             for ch in class_handlers:
                 # eventual methods are ephemeral and normally the following
                 # condition would always be True for methods but the dict used
