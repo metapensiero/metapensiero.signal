@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 from functools import partial
 import logging
+import inspect
 import weakref
 
 from metapensiero.asyncio import transaction
@@ -200,7 +201,17 @@ class Signal(object):
         results = []
         for method in subscribers:
             try:
-                res = method(*args, **kwargs)
+                signature = inspect.signature(method, follow_wrapped=False)
+                has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD
+                                for n, p in signature.parameters.items())
+                if has_varkw:
+                    bind = signature.bind_partial(*args, **kwargs)
+                else:
+                    bind = signature.bind_partial(*args,
+                        **{k:v for k, v in kwargs.items() if k in
+                           signature.parameters})
+                bind.apply_defaults()
+                res = method(*bind.args, **bind.kwargs)
                 if isawaitable(res):
                     coros.append(res)
                 else:
