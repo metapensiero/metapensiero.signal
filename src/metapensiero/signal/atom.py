@@ -28,6 +28,7 @@ class Signal(object):
     """
     _external_signaller = None
     _name = None
+    _sequential_async_handlers = False
 
     class InstanceProxy(object):
         """A small proxy used to get instance context when signal is a
@@ -87,7 +88,7 @@ class Signal(object):
                                       **kwargs)
 
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
-                 loop=None, external=None):
+                 loop=None, external=None, sequential_async_handlers=False):
         self.name = name
         self.subscribers = MethodAwareWeakKeyOrderedDict()
         self.loop = loop or asyncio.get_event_loop()
@@ -97,6 +98,7 @@ class Signal(object):
         self._fconnect = fconnect
         self._fdisconnect = fdisconnect
         self._iproxies = weakref.WeakKeyDictionary()
+        self._sequential_async_handlers = sequential_async_handlers
 
     def __get__(self, instance, cls=None):
         if instance is not None:
@@ -114,7 +116,7 @@ class Signal(object):
         else:
             trans = None
         if trans is None:
-            res = list(map(partial(asyncio.ensure_future, loop=loop), items))
+            res = items
         else:
             res = trans.add(*items)
         return res
@@ -128,17 +130,18 @@ class Signal(object):
 
         If no async results need to be computed, the future fullfills immediately.
         """
-        res = asyncio.Future(loop=loop)
         if async_results:
-            gathering = asyncio.gather(*async_results, loop=loop)
-            def gather_cb(future):
-                try:
-                    sync_results.extend(future.result())
-                    res.set_result(sync_results)
-                except Exception as e:
-                    res.set_exception(e)
-            gathering.add_done_callback(gather_cb)
+            if self._sequential_async_handlers:
+                res = asyncio.ensure_future(
+                    self._sequential_handlers_exec(sync_results, async_results),
+                    loop = self.loop)
+            else:
+                res = asyncio.Future(loop=loop)
+                gathering = asyncio.gather(*async_results, loop=loop)
+                gathering.add_done_callback(
+                    partial(self._parallel_handlers_exec_cb, sync_results, res))
         else:
+            res = asyncio.Future(loop=loop)
             res.set_result(sync_results)
         return res
 
@@ -227,7 +230,8 @@ class Signal(object):
                 coros.append(ext_res)
         # the results are converted into a future that fulfills when all
         # the results are computed
-        coros = self._add_to_trans(*coros, loop=loop)
+        if not self._sequential_async_handlers:
+            coros = self._add_to_trans(*coros, loop=loop)
         results = self._create_async_results(results, coros, loop)
         results.add_done_callback(partial(self._print_error_cback, instance))
         return results
@@ -236,6 +240,13 @@ class Signal(object):
         loop = self._loop_from_instance(instance)
         return self._notify(set((cback,)), instance, loop, args, kwargs)
 
+    def _parallel_handlers_exec_cb(self, sync_results, result_fut,  future):
+        try:
+            sync_results.extend(future.result())
+            result_fut.set_result(sync_results)
+        except Exception as e:
+            result_fut.set_exception(e)
+
     def _print_error_cback(self, instance, future):
         if future.exception():
             try:
@@ -243,6 +254,11 @@ class Signal(object):
             except Exception as e:
                 logger.exception("Error occurred while running event "
                                  "callbacks for '%s' on %r", self.name, instance)
+
+    async def _sequential_handlers_exec(self, sync_results, async_results):
+        for coro in async_results:
+            sync_results.append(await coro)
+        return sync_results
 
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
