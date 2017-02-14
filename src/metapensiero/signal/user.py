@@ -145,14 +145,27 @@ class SignalAndHandlerInitMeta(type):
 
     def _sort_handlers(cls, handlers, configs):
         """Sort class defined handlers to give precedence to those declared at lower
-        level. ``config`` is unused for now but will be considered for future
-        expansions.
+        level. ``config`` can contain two keys ``begin`` or ``end`` that will
+        further reposition the handler at the two extremes.
         """
+        def macro_precedence_sorter(item):
+            data = configs[item]
+            if 'begin' in data:
+                return (-1, data['level'])
+            elif 'end' in data:
+                return (1, data['level'])
+            else:
+                return (0, data['level'])
+
         per_signal = defaultdict(list)
-        for m in reversed(handlers.maps):
+        for level, m in enumerate(reversed(handlers.maps)):
             for hname, sig_name in handlers.items():
-                if hname not in per_signal[sig_name]:
-                    per_signal[sig_name].append(hname)
+                sig_handlers = per_signal[sig_name]
+                if hname not in sig_handlers:
+                    configs[hname]['level'] = level
+                    sig_handlers.append(hname)
+        for sig_handlers in per_signal.values():
+            sig_handlers.sort(key=macro_precedence_sorter)
         return per_signal
 
     def instance_signals_and_handlers(cls, instance):
