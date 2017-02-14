@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# :Project:  metapensiero.signal -- signal class
-# :Created:    mer 16 dic 2015 12:28:23 CET
+# :Project:   metapensiero.signal -- signal class
+# :Created:   mer 16 dic 2015 12:28:23 CET
 # :Author:    Alberto Berti <alberto@metapensiero.it>
 # :License:   GNU General Public License version 3 or later
+# :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
 import asyncio
