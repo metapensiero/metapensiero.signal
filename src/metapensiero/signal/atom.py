@@ -125,8 +125,8 @@ class Signal(object):
         subscribers[cback] = True
 
     def _create_async_results(self, sync_results, async_results, loop):
-        """Crate a future that will be fullfilled when all the results, both sync and
-        async are computed. This is used only when running in py3.
+        """Create a future that will be fullfilled when all the results, both
+        sync and async are computed.
 
         If no async results need to be computed, the future fullfills immediately.
         """
@@ -173,8 +173,7 @@ class Signal(object):
         at class-definition time. If an external publish function is
         supplied, call it with the provided arguments at the end.
 
-        Returns a list with the results from the handlers execution.  In Py3,
-        returns a future that will return a list of the results from the
+        Returns a future that will return a list of the results from the
         handlers execution.
         """
         run_async = kwargs.pop('run_async', False)
