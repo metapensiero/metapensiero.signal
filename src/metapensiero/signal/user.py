@@ -55,7 +55,7 @@ class SignalAndHandlerInitMeta(type):
     """Container for handlers definitions."""
     _signal_handlers_sorted = None
     """Contains a Dict[signal_name, handlers] with sorted handlers."""
-    _signal_configs = None
+    _signal_handlers_configs = None
     """Container for additional handler config."""
 
     def __init__(cls, name, bases, namespace):
@@ -64,8 +64,7 @@ class SignalAndHandlerInitMeta(type):
         # right to left
         signaller = cls._external_signaller_and_handler
         signals, handlers, configs = cls._build_inheritation_chain(bases,
-            '_signals', '_signal_handlers', '_signal_configs')
-
+            '_signals', '_signal_handlers', '_signal_handlers_configs')
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
         cls._signal_handlers_sorted = cls._sort_handlers(handlers, configs)
@@ -75,13 +74,14 @@ class SignalAndHandlerInitMeta(type):
 
         cls._signals = signals
         cls._signal_handlers = handlers
+        cls._signal_handlers_configs = configs
 
     def _build_inheritation_chain(cls, bases, *names):
         """For all of the names build a ChainMap containing a map for every
         base class."""
         result = []
         for name in names:
-            result.append(ChainMap({}, *(getattr(base, name, {}) for
+            result.append(ChainMap({}, *((getattr(base, name, None) or {}) for
                                          base in bases)))
         return result
 
