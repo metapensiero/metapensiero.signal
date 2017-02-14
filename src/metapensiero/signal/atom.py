@@ -134,7 +134,7 @@ class Signal(object):
             if self._sequential_async_handlers:
                 res = asyncio.ensure_future(
                     self._sequential_handlers_exec(sync_results, async_results),
-                    loop = self.loop)
+                    loop=loop)
             else:
                 res = asyncio.Future(loop=loop)
                 gathering = asyncio.gather(*async_results, loop=loop)
