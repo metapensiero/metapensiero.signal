@@ -504,7 +504,7 @@ def test_11_notify_wrapper(events):
 
 def test_12_connect_wrapper(events):
 
-    c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None)
+    c = dict(called=0, connect_handler=None, handler_called=0, handler_args=None)
 
     asignal = Signal()
 
@@ -531,7 +531,7 @@ def test_12_connect_wrapper(events):
     assert c['handler_called'] == 1
     assert c['handler_args'] == (('bar',), {'k': 1})
 
-    c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None,
+    c = dict(called=0, connect_handler=None, handler_called=0, handler_args=None,
              handler2_called=0, handler2_args=None)
 
     @six.add_metaclass(SignalAndHandlerInitMeta)
@@ -573,7 +573,7 @@ def test_12_connect_wrapper(events):
 
 def test_13_disconnect_wrapper():
 
-    c = dict(called=0, disconnnect_handler=None)
+    c = dict(called=0, disconnect_handler=None)
 
     asignal = Signal()
 
@@ -596,7 +596,7 @@ def test_13_disconnect_wrapper():
     assert c['disconnect_handler'] == handler
     assert len(asignal.subscribers) == 0
 
-    c = dict(called=0, disconnnect_handler=None)
+    c = dict(called=0, disconnect_handler=None)
 
     @six.add_metaclass(SignalAndHandlerInitMeta)
     class A(object):

@@ -347,8 +347,8 @@ beacuse you have to respect that:
 
   from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
 
-  c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None,
-           disconnnect_handler=None, handler2_called=0, handler2_args=None)
+  c = dict(called=0, connect_handler=None, handler_called=0, handler_args=None,
+           disconnect_handler=None, handler2_called=0, handler2_args=None)
 
   class A(metaclass=SignalAndHandlerInitMeta):
 
