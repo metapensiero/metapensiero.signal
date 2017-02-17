@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-# :Project:  metapensiero.signal -- Utilities for classes that use the signal
-# :Created:    mer 16 dic 2015 12:46:59 CET
+# :Project:   metapensiero.signal -- Utilities for classes that use the signal
+# :Created:   mer 16 dic 2015 12:46:59 CET
 # :Author:    Alberto Berti <alberto@metapensiero.it>
 # :License:   GNU General Public License version 3 or later
+# :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
 from collections import ChainMap, defaultdict
 
 from .external import ExternalSignallerAndHandler
 from . import SignalError
+
 
 SPEC_CONTAINER_MEMBER_NAME = '_publish'
 "Special attribute name to attach specific info to decorated methods."
@@ -39,22 +41,29 @@ class SignalNameHandlerDecorator(object):
                     config = spec['config']
         return signal_name, config
 
+
 handler = SignalNameHandlerDecorator
 
 
 class SignalAndHandlerInitMeta(type):
-    """A metaclass for registering signals and handlers"""
+    """A metaclass for registering signals and handlers."""
 
     _is_handler = SignalNameHandlerDecorator.is_handler
+
     _external_signaller_and_handler = None
-    """Optional `ExternalSignaller` instance that connects to external event
-    systems."""
+    """Optional :class:`~.atom.ExternalSignaller` instance that connects to
+    external event systems.
+    """
+
     _signals = None
     """Container for signal definitions."""
+
     _signal_handlers = None
     """Container for handlers definitions."""
+
     _signal_handlers_sorted = None
     """Contains a Dict[signal_name, handlers] with sorted handlers."""
+
     _signal_handlers_configs = None
     """Container for additional handler config."""
 
@@ -86,7 +95,7 @@ class SignalAndHandlerInitMeta(type):
         return result
 
     def _build_instance_handler_mapping(cls, instance, handle_d):
-        """For every unbounded handler, get the bounded version."""
+        """For every unbound handler, get the bound version."""
         res = {}
         for member_name, sig_name in handle_d.items():
             if sig_name in res:
@@ -107,7 +116,8 @@ class SignalAndHandlerInitMeta(type):
             if sig_name not in signals:
                 disable_check = configs[aname].get('disable_check', False)
                 if not disable_check:
-                    raise SignalError("Cannot find a signal named '%s'" % sig_name)
+                    raise SignalError("Cannot find a signal named '%s'"
+                                      % sig_name)
 
     def _find_local_signals(cls, signals,  namespace):
         """Add name info to every "local" (present in the body of this class)
@@ -182,4 +192,5 @@ class SignalAndHandlerInitMeta(type):
     def with_external(mclass, external, name=None):
         assert isinstance(external, ExternalSignallerAndHandler)
         name = name or "ExternalSignalAndHandlerInitMeta"
-        return type(name, (mclass,), {'_external_signaller_and_handler': external})
+        return type(name, (mclass,),
+                    {'_external_signaller_and_handler': external})
