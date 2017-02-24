@@ -45,7 +45,21 @@ class SignalNameHandlerDecorator(object):
 handler = SignalNameHandlerDecorator
 
 
-class SignalAndHandlerInitMeta(type):
+class InheritToolsMeta(type):
+    """A reusable metaclass with method to deal with constructing data from
+    elements contained in one class body and in its bases."""
+
+    def _build_inheritation_chain(cls, bases, *names):
+        """For all of the names build a ChainMap containing a map for every
+        base class."""
+        result = []
+        for name in names:
+            result.append(ChainMap({}, *((getattr(base, name, None) or {}) for
+                                         base in bases)))
+        return result
+
+
+class SignalAndHandlerInitMeta(InheritToolsMeta):
     """A metaclass for registering signals and handlers."""
 
     _is_handler = SignalNameHandlerDecorator.is_handler
@@ -84,15 +98,6 @@ class SignalAndHandlerInitMeta(type):
         cls._signals = signals
         cls._signal_handlers = handlers
         cls._signal_handlers_configs = configs
-
-    def _build_inheritation_chain(cls, bases, *names):
-        """For all of the names build a ChainMap containing a map for every
-        base class."""
-        result = []
-        for name in names:
-            result.append(ChainMap({}, *((getattr(base, name, None) or {}) for
-                                         base in bases)))
-        return result
 
     def _build_instance_handler_mapping(cls, instance, handle_d):
         """For every unbound handler, get the bound version."""
