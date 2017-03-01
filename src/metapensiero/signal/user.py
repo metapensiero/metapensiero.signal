@@ -45,11 +45,11 @@ class SignalNameHandlerDecorator(object):
 handler = SignalNameHandlerDecorator
 
 
-class InheritToolsMeta(type):
+class InheritanceToolsMeta(type):
     """A reusable metaclass with method to deal with constructing data from
     elements contained in one class body and in its bases."""
 
-    def _build_inheritation_chain(cls, bases, *names):
+    def _build_inheritance_chain(cls, bases, *names):
         """For all of the names build a ChainMap containing a map for every
         base class."""
         result = []
@@ -59,7 +59,7 @@ class InheritToolsMeta(type):
         return result
 
 
-class SignalAndHandlerInitMeta(InheritToolsMeta):
+class SignalAndHandlerInitMeta(InheritanceToolsMeta):
     """A metaclass for registering signals and handlers."""
 
     _is_handler = SignalNameHandlerDecorator.is_handler
@@ -86,7 +86,7 @@ class SignalAndHandlerInitMeta(InheritToolsMeta):
         # collect signals and handlers from the bases, overwriting them from
         # right to left
         signaller = cls._external_signaller_and_handler
-        signals, handlers, configs = cls._build_inheritation_chain(bases,
+        signals, handlers, configs = cls._build_inheritance_chain(bases,
             '_signals', '_signal_handlers', '_signal_handlers_configs')
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
