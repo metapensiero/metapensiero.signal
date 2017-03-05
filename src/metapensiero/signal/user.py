@@ -91,8 +91,12 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
         cls._signal_handlers_sorted = cls._sort_handlers(handlers, configs)
-        if signaller:
-            signaller.register_class(cls, bases, namespace, signals, handlers)
+        if signaller is not None:
+            try:
+                signaller.register_class(cls, bases, namespace, signals, handlers)
+            except Exception as cause:
+                new = SignalError(f"Error while registering class {cls!r}")
+                raise new from cause
         cls._check_local_handlers(signals, handlers, namespace, configs)
 
         cls._signals = signals
