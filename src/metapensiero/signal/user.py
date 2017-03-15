@@ -49,13 +49,15 @@ class InheritanceToolsMeta(type):
     """A reusable metaclass with method to deal with constructing data from
     elements contained in one class body and in its bases."""
 
-    def _build_inheritance_chain(cls, bases, *names):
+    def _build_inheritance_chain(cls, bases, *names, merge=False):
         """For all of the names build a ChainMap containing a map for every
         base class."""
         result = []
         for name in names:
             result.append(ChainMap({}, *((getattr(base, name, None) or {}) for
                                          base in bases)))
+        if merge:
+            result = [dict(map) for map in result]
         return result
 
 
