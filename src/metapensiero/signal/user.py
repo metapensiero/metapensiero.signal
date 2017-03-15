@@ -88,11 +88,14 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
         # collect signals and handlers from the bases, overwriting them from
         # right to left
         signaller = cls._external_signaller_and_handler
-        signals, handlers, configs = cls._build_inheritance_chain(bases,
-            '_signals', '_signal_handlers', '_signal_handlers_configs')
+        signals, handlers, configs = cls._build_inheritance_chain(
+            bases, '_signals', '_signal_handlers', '_signal_handlers_configs')
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
         cls._signal_handlers_sorted = cls._sort_handlers(handlers, configs)
+        handlers = dict(handlers)
+        signals = dict(signals)
+        configs = dict(configs)
         if signaller is not None:
             try:
                 signaller.register_class(cls, bases, namespace, signals, handlers)
