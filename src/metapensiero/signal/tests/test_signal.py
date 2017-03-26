@@ -172,7 +172,7 @@ def test_05_class_defined_signal(events):
     assert a2.called == (2, 'b')
 
 
-def test_signal_06_init_mclass():
+def test_06_signal_init_mclass():
     class A(metaclass=SignalAndHandlerInitMeta):
 
         click = Signal()
