@@ -6,15 +6,10 @@
 # :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
-from __future__ import unicode_literals, absolute_import
-
-import six
-
 from abc import ABCMeta, abstractmethod
 
 
-@six.add_metaclass(ABCMeta)
-class ExternalSignaller(object):
+class ExternalSignaller(metaclass=ABCMeta):
     """An ExternalSignaler ABC, used to interface Signals with external
     event systems.
     """

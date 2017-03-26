@@ -6,20 +6,9 @@
 # :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
-from __future__ import unicode_literals, absolute_import
-
-import six
-
 from collections import OrderedDict
 import inspect
 import weakref
-
-
-if six.PY3:
-    WeakMethod = weakref.WeakMethod
-else:
-    import weakrefmethod
-    WeakMethod = weakrefmethod.WeakMethod
 
 
 class MethodAwareWeakSet(weakref.WeakSet):
@@ -33,7 +22,7 @@ class MethodAwareWeakSet(weakref.WeakSet):
         if self._pending_removals:
             self._commit_removals()
         if inspect.ismethod(item):
-            ref = WeakMethod
+            ref = weakref.WeakMethod
         else:
             ref = weakref.ref
         self.data.add(ref(item, self._remove))
@@ -70,7 +59,7 @@ class MethodAwareWeakKeyOrderedDict(weakref.WeakKeyDictionary):
 
     def _ref(self, obj, *args, **kwargs):
         if inspect.ismethod(obj):
-            ref = WeakMethod
+            ref = weakref.WeakMethod
         else:
             ref = weakref.ref
         return ref(obj, *args, **kwargs)

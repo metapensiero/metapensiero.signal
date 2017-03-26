@@ -5,67 +5,54 @@
 # :License:   GNU General Public License version 3 or later
 #
 
-from __future__ import unicode_literals, absolute_import
-
-import six
-
-if six.PY3:
-    import asyncio
-else:
-    asyncio = None
+import asyncio
 
 import pytest
 
-if six.PY3:
+class EventFactory:
+    """An helper class that helps creating asyncio.Event instances and waiting for
+    them.
+    """
 
-    class EventFactory:
-        """An helper class that helps creating asyncio.Event instances and waiting for
-        them.
-        """
+    def __init__(self, loop=None):
+        self.loop = loop
+        self.events = set()
 
-        def __init__(self, loop=None):
-            self.loop = loop
-            self.events = set()
+    def __getattr__(self, name):
+        event = asyncio.Event(loop=self.loop)
+        setattr(self, name, event)
+        self.events.add(event)
+        return event
 
-        def __getattr__(self, name):
-            event = asyncio.Event(loop=self.loop)
-            setattr(self, name, event)
-            self.events.add(event)
-            return event
+    __getitem__ = __getattr__
 
-        __getitem__ = __getattr__
+    def wait(self, *exclude, **kwargs):
+        timeout = kwargs.pop('timeout', None)
+        exclude = set(exclude)
+        return asyncio.wait(
+            map(lambda e: e.wait(),
+            self.events - exclude), timeout=timeout,
+            loop=self.loop)
 
-        def wait(self, *exclude, **kwargs):
-            timeout = kwargs.pop('timeout', None)
-            exclude = set(exclude)
-            return asyncio.wait(
-                map(lambda e: e.wait(),
-                self.events - exclude), timeout=timeout,
-                loop=self.loop)
+    def reset(self):
+        for e in self.events:
+            e.clear()
 
-        def reset(self):
-            for e in self.events:
-                e.clear()
+    def define(self, *names):
+        for name in names:
+            getattr(self, name)
 
-        def define(self, *names):
-            for name in names:
-                getattr(self, name)
+    def wait_for(self, event, timeout=None):
+        return asyncio.wait_for(event.wait(), timeout=timeout, loop=self.loop)
 
-        def wait_for(self, event, timeout=None):
-            return asyncio.wait_for(event.wait(), timeout=timeout, loop=self.loop)
+    TimeoutError = asyncio.TimeoutError
 
-        TimeoutError = asyncio.TimeoutError
+@pytest.fixture(scope='session')
+def loop():
+    l = asyncio.new_event_loop()
+    asyncio.set_event_loop(l)
+    return l
 
-    @pytest.fixture(scope='session')
-    def loop():
-        l = asyncio.new_event_loop()
-        asyncio.set_event_loop(l)
-        return l
-
-    @pytest.fixture(scope='function')
-    def events(loop):
-        return EventFactory(loop)
-else:
-    @pytest.fixture(scope='function')
-    def events():
-        pass
+@pytest.fixture(scope='function')
+def events(loop):
+    return EventFactory(loop)

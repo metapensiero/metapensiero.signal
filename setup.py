@@ -7,8 +7,6 @@
 #
 
 import os
-import sys
-from codecs import open
 
 from setuptools import setup, find_packages
 
@@ -20,25 +18,13 @@ with open(os.path.join(here, 'CHANGES.rst'), encoding='utf-8') as f:
 with open(os.path.join(here, 'version.txt'), encoding='utf-8') as f:
     VERSION = f.read().strip()
 
-PY3 = sys.version_info[:1] == (3,)
-
-INSTALL_REQUIRES = [
-    'setuptools',
-    'six'
-]
-
-if PY3:
-    INSTALL_REQUIRES.append('metapensiero.asyncio.transaction>=0.5')
-else:
-    INSTALL_REQUIRES.append('weakrefmethod')
-
 setup(
     name="metapensiero.signal",
     version=VERSION,
     url="https://github.com/azazel75/metapensiero.signal",
 
     description="A event framework that is asyncio aware",
-    long_description=README + u'\n\n' + CHANGES,
+    long_description=README + '\n\n' + CHANGES,
 
     author="Alberto Berti",
     author_email="alberto@metapensiero.it",
@@ -51,8 +37,6 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU General Public License (GPL)",
         ],
@@ -62,7 +46,10 @@ setup(
               for pkg in find_packages('src/metapensiero')],
     package_dir={'': 'src'},
     namespace_packages=['metapensiero'],
-    install_requires=INSTALL_REQUIRES,
+    install_requires=[
+        'metapensiero.asyncio.transaction>=0.5',
+        'setuptools',
+    ],
     extras_require={
         'dev': [
             'metapensiero.tool.bump_version',
