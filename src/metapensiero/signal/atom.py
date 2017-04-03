@@ -126,10 +126,10 @@ class Signal(object):
         subscribers[cback] = True
 
     def _create_async_results(self, sync_results, async_results, loop):
-        """Create a future that will be fullfilled when all the results, both
+        """Create a future that will be fulfilled when all the results, both
         sync and async are computed.
 
-        If no async results need to be computed, the future fullfills immediately.
+        If no async results need to be computed, the future fulfills immediately.
         """
         if async_results:
             if self._sequential_async_handlers:
