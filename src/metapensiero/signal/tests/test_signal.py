@@ -9,7 +9,7 @@ import asyncio
 
 import pytest
 
-from metapensiero.signal import Signal
+from metapensiero.signal import Signal, InstanceProxy
 from metapensiero.signal import SignalAndHandlerInitMeta, handler
 
 
@@ -148,7 +148,7 @@ def test_05_class_defined_signal(events):
     assert a1.called is False
     assert a2.called is False
 
-    assert isinstance(a1.click, Signal.InstanceProxy)
+    assert isinstance(a1.click, InstanceProxy)
 
     a1.click.connect(handler1)
     assert len(a1.click.subscribers) == 2
@@ -200,7 +200,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     assert a1.called is False
 
-    assert isinstance(a1.click, Signal.InstanceProxy)
+    assert isinstance(a1.click, InstanceProxy)
 
     assert len(a1.click.subscribers) == 0
 

@@ -24,69 +24,73 @@ from . import SignalAndHandlerInitMeta
 logger = logging.getLogger(__name__)
 
 
+class InstanceProxy(object):
+    """A small proxy used to get instance context when signal is a
+    member of a class.
+    """
+
+    def __init__(self, signal, instance):
+        self.signal = signal
+        self.instance = instance
+        self.subscribers = self.get_subscribers()
+
+    def clear(self):
+        """Remove all the connected handlers, for this instance"""
+        self.subscribers.clear()
+
+    def connect(self, cback):
+        "See signal"
+        return self.signal.connect(cback,
+                                   subscribers=self.subscribers,
+                                   instance=self.instance)
+
+    def disconnect(self, cback):
+        "See signal"
+        return self.signal.disconnect(cback,
+                                      subscribers=self.subscribers,
+                                      instance=self.instance)
+
+    def get_subscribers(self):
+        """Get per-instance subscribers from the signal.
+        """
+        data = self.signal.instance_subscribers
+        if self.instance not in data:
+            data[self.instance] = MethodAwareWeakKeyOrderedDict()
+        return data[self.instance]
+
+    @property
+    def loop(self):
+        return getattr(self.instance, 'loop', None)
+
+    def notify(self, *args, **kwargs):
+        "See signal"
+        loop = kwargs.pop('loop', self.loop)
+        return self.signal.notify(*args,
+                                  _subscribers=self.subscribers,
+                                  _instance=self.instance,
+                                  _loop=loop,
+                                  **kwargs)
+
+    def notify_no_ext(self, *args, **kwargs):
+        "Like notify but avoid notifying external managers"
+        loop = kwargs.pop('loop', self.loop)
+        return self.signal.notify(*args,
+                                  _subscribers=self.subscribers,
+                                  _instance=self.instance,
+                                  _loop=loop,
+                                  _notify_external=False,
+                                  **kwargs)
+
+    def __repr__(self):
+        return f'<Signal "{self.signal.name}" on {self.instance!r}>'
+
+
 class Signal(object):
     """ The atom of event handling
     """
     _external_signaller = None
     _name = None
     _sequential_async_handlers = False
-
-    class InstanceProxy(object):
-        """A small proxy used to get instance context when signal is a
-        member of a class.
-        """
-
-        def __init__(self, signal, instance):
-            self.signal = signal
-            self.instance = instance
-            self.subscribers = self.get_subscribers()
-
-        def clear(self):
-            """Remove all the connected handlers, for this instance"""
-            self.subscribers.clear()
-
-        def connect(self, cback):
-            "See signal"
-            return self.signal.connect(cback,
-                                       subscribers=self.subscribers,
-                                       instance=self.instance)
-
-        def disconnect(self, cback):
-            "See signal"
-            return self.signal.disconnect(cback,
-                                          subscribers=self.subscribers,
-                                          instance=self.instance)
-
-        def get_subscribers(self):
-            """Get per-instance subscribers from the signal.
-            """
-            data = self.signal.instance_subscribers
-            if self.instance not in data:
-                data[self.instance] = MethodAwareWeakKeyOrderedDict()
-            return data[self.instance]
-
-        @property
-        def loop(self):
-            return getattr(self.instance, 'loop', None)
-
-        def notify(self, *args, **kwargs):
-            "See signal"
-            loop = kwargs.pop('loop', self.loop)
-            return self.signal.notify(*args,
-                                      _subscribers=self.subscribers,
-                                      _instance=self.instance,
-                                      _loop=loop,
-                                      **kwargs)
-
-        def notify_no_ext(self, *args, **kwargs):
-            "Like notify but avoid notifying external managers"
-            loop = kwargs.pop('loop', self.loop)
-            return self.signal.notify(*args,
-                                      _subscribers=self.subscribers,
-                                      _instance=self.instance,
-                                      _loop=loop,
-                                      _notify_external=False,
-                                      **kwargs)
 
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
                  loop=None, external=None, sequential_async_handlers=False):
@@ -104,7 +108,7 @@ class Signal(object):
     def __get__(self, instance, cls=None):
         if instance is not None:
             if instance not in self._iproxies:
-                self._iproxies[instance] = self.InstanceProxy(self, instance)
+                self._iproxies[instance] = InstanceProxy(self, instance)
             result = self._iproxies[instance]
         else:
             result = self
