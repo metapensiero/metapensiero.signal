@@ -6,6 +6,7 @@
 # :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
+from abc import ABCMeta
 from collections import ChainMap, defaultdict
 
 from .external import ExternalSignallerAndHandler
@@ -45,7 +46,7 @@ class SignalNameHandlerDecorator(object):
 handler = SignalNameHandlerDecorator
 
 
-class InheritanceToolsMeta(type):
+class InheritanceToolsMeta(ABCMeta):
     """A reusable metaclass with method to deal with constructing data from
     elements contained in one class body and in its bases."""
 
