@@ -8,9 +8,10 @@
 
 from abc import ABCMeta
 from collections import ChainMap, defaultdict
+from functools import partial
 
 from .external import ExternalSignallerAndHandler
-from . import SignalError
+from . import HANDLERS_SORT_MODE, SignalError
 
 
 SPEC_CONTAINER_MEMBER_NAME = '_publish'
@@ -102,7 +103,7 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
             bases, '_signals', '_signal_handlers', '_signal_handlers_configs')
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
-        cls._signal_handlers_sorted = cls._sort_handlers(handlers, configs)
+        cls._signal_handlers_sorted = cls._sort_handlers(signals, handlers, configs)
         configs = dict(configs)
         if signaller is not None:
             try:
@@ -175,29 +176,40 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
         handlers = cls._signal_handlers_sorted[signal_name]
         return [getattr(instance, hname) for hname in handlers]
 
-    def _sort_handlers(cls, handlers, configs):
+    def _sort_handlers(cls, signals, handlers, configs):
         """Sort class defined handlers to give precedence to those declared at lower
         level. ``config`` can contain two keys ``begin`` or ``end`` that will
         further reposition the handler at the two extremes.
         """
-        def macro_precedence_sorter(item):
-            data = configs[item]
-            if 'begin' in data:
-                return (-1, data['level'])
-            elif 'end' in data:
-                return (1, data['level'])
+        def macro_precedence_sorter(direction, hname):
+            """The default is to sort 'bottom_up', with lower level getting executed
+            first, but sometimes you need them reversed."""
+            data = configs[hname]
+            topdown_sort = direction == HANDLERS_SORT_MODE.TOPDOWN
+            if topdown_sort:
+                level = levels_count - 1 - data['level']
             else:
-                return (0, data['level'])
+                level = data['level']
+            if 'begin' in data:
+                return (-1, level, hname)
+            elif 'end' in data:
+                return (1, level, hname)
+            else:
+                return (0, level, hname)
 
+        levels_count = len(handlers.maps)
         per_signal = defaultdict(list)
         for level, m in enumerate(reversed(handlers.maps)):
-            for hname, sig_name in handlers.items():
+            for hname, sig_name in m.items():
                 sig_handlers = per_signal[sig_name]
                 if hname not in sig_handlers:
                     configs[hname]['level'] = level
                     sig_handlers.append(hname)
-        for sig_handlers in per_signal.values():
-            sig_handlers.sort(key=macro_precedence_sorter)
+        for sig_name, sig_handlers in per_signal.items():
+            if sig_name in signals: # it may be on a mixin
+                sort_mode = signals[sig_name]._sort_mode
+                sig_handlers.sort(key=partial(macro_precedence_sorter,
+                                              sort_mode))
         return per_signal
 
     def instance_signals_and_handlers(cls, instance):

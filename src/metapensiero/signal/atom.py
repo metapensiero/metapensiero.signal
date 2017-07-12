@@ -19,6 +19,7 @@ from .compat import isawaitable
 from .weak import MethodAwareWeakKeyOrderedDict
 from . import ExternalSignaller
 from . import SignalAndHandlerInitMeta
+from . import HANDLERS_SORT_MODE
 
 
 logger = logging.getLogger(__name__)
@@ -92,8 +93,11 @@ class Signal(object):
     _name = None
     _sequential_async_handlers = False
 
+    SORT_MODE = HANDLERS_SORT_MODE
+
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
-                 loop=None, external=None, sequential_async_handlers=False):
+                 loop=None, external=None, sequential_async_handlers=False,
+                 sort_mode=None):
         self.name = name
         self.subscribers = MethodAwareWeakKeyOrderedDict()
         self.loop = loop or asyncio.get_event_loop()
@@ -104,6 +108,7 @@ class Signal(object):
         self._fdisconnect = fdisconnect
         self._iproxies = weakref.WeakKeyDictionary()
         self._sequential_async_handlers = sequential_async_handlers
+        self._sort_mode = sort_mode or HANDLERS_SORT_MODE.BOTTOMUP
 
     def __get__(self, instance, cls=None):
         if instance is not None:

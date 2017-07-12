@@ -12,6 +12,7 @@ import pytest
 from metapensiero.signal import handler, Signal, SignalAndHandlerInitMeta
 from metapensiero.signal.atom import InstanceProxy
 
+
 def test_01_signal_with_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
@@ -660,3 +661,185 @@ def test_16_dot_handlers(events):
 
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(trans.end())
+
+
+@pytest.mark.asyncio
+async def test_17_handlers_sorting():
+
+    called = []
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal(sort_mode=Signal.SORT_MODE.BOTTOMUP)
+
+        @handler('click')
+        def z(self):
+            called.append('z')
+
+
+    class B(A):
+
+        @handler('click')
+        def a(self):
+            called.append('a')
+
+    b = B()
+
+    await b.click.notify()
+
+    assert len(called) == 2
+    assert called.index('z') == 0
+    assert called.index('a') == 1
+
+
+    called = []
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal(sort_mode=Signal.SORT_MODE.TOPDOWN)
+
+        @handler('click')
+        def z(self):
+            called.append('z')
+
+
+    class B(A):
+
+        @handler('click')
+        def a(self):
+            called.append('a')
+
+    b = B()
+
+    await b.click.notify()
+
+    assert len(called) == 2
+    assert called.index('z') == 1
+    assert called.index('a') == 0
+
+
+    # bottom_up
+    called = []
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal(sort_mode=Signal.SORT_MODE.BOTTOMUP)
+
+        @handler('click')
+        def z(self):
+            called.append('z')
+
+    class B(A):
+
+        @handler('click')
+        def a(self):
+            called.append('a')
+
+    class Cee(B):
+
+        @handler('click', begin=True)
+        def b(self):
+            called.append('b')
+
+    c = Cee()
+
+    await c.click.notify()
+
+    assert len(called) == 3
+    assert called.index('z') == 1
+    assert called.index('a') == 2
+    assert called.index('b') == 0
+
+    called = []
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal(sort_mode=Signal.SORT_MODE.BOTTOMUP)
+
+        @handler('click')
+        def z(self):
+            called.append('z')
+
+    class B(A):
+
+        @handler('click', end=True)
+        def a(self):
+            called.append('a')
+
+    class Cee(B):
+
+        @handler('click')
+        def b(self):
+            called.append('b')
+
+    c = Cee()
+
+    await c.click.notify()
+
+    assert len(called) == 3
+    assert called.index('z') == 0
+    assert called.index('a') == 2
+    assert called.index('b') == 1
+
+    # topdown
+    called = []
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal(sort_mode=Signal.SORT_MODE.TOPDOWN)
+
+        @handler('click')
+        def z(self):
+            called.append('z')
+
+    class B(A):
+
+        @handler('click')
+        def a(self):
+            called.append('a')
+
+    class Cee(B):
+
+        @handler('click', begin=True)
+        def b(self):
+            called.append('b')
+
+    c = Cee()
+
+    await c.click.notify()
+
+    assert len(called) == 3
+    assert called.index('z') == 2
+    assert called.index('a') == 1
+    assert called.index('b') == 0
+
+    called = []
+
+    class A(metaclass=SignalAndHandlerInitMeta):
+
+        click = Signal(sort_mode=Signal.SORT_MODE.TOPDOWN)
+
+        @handler('click')
+        def z(self):
+            called.append('z')
+
+    class B(A):
+
+        @handler('click', end=True)
+        def a(self):
+            called.append('a')
+
+    class Cee(B):
+
+        @handler('click')
+        def b(self):
+            called.append('b')
+
+    c = Cee()
+
+    await c.click.notify()
+
+    assert len(called) == 3
+    assert called.index('z') == 1
+    assert called.index('a') == 2
+    assert called.index('b') == 0
