@@ -55,8 +55,17 @@ class InheritanceToolsMeta(ABCMeta):
         base class."""
         result = []
         for name in names:
-            result.append(ChainMap({}, *((getattr(base, name, None) or {}) for
-                                         base in bases)))
+            maps = []
+            for base in bases:
+                bmap = getattr(base, name, None)
+                if bmap is not None:
+                    assert isinstance(bmap, (dict, ChainMap))
+                    if len(bmap):
+                        if isinstance(bmap, ChainMap):
+                            maps.extend(bmap.maps)
+                        else:
+                            maps.append(bmap)
+            result.append(ChainMap({}, *maps))
         if merge:
             result = [dict(map) for map in result]
         return result
@@ -94,8 +103,6 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
         cls._signal_handlers_sorted = cls._sort_handlers(handlers, configs)
-        handlers = dict(handlers)
-        signals = dict(signals)
         configs = dict(configs)
         if signaller is not None:
             try:

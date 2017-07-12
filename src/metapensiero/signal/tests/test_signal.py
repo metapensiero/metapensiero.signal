@@ -606,8 +606,8 @@ def test_15_external_signaller_filters_handlers():
             for hname, sig_name in handlers.items():
                 if sig_name not in signals and sig_name.startswith('myext'):
                     ext_handlers[hname] = sig_name
-            for hname in ext_handlers.keys():
-                del handlers[hname]
+            for ext_signame in set(ext_handlers.values()):
+                signals[ext_signame] = None
             cls._ext_handlers = ext_handlers
 
     ExternalSignallerAndHandler.register(MyExternalSignaller)
@@ -629,7 +629,8 @@ def test_15_external_signaller_filters_handlers():
             pass
 
     assert A._ext_handlers == {'handler2': 'myext.dbclick'}
-    assert A._signal_handlers == {'handler1': 'click'}
+    assert A._signal_handlers == {'handler1': 'click', 'handler2': 'myext.dbclick'}
+    assert A._signals == {'click': A.click, 'myext.dbclick': None}
 
 
 def test_16_dot_handlers(events):
