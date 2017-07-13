@@ -97,7 +97,7 @@ class Signal(object):
 
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
                  loop=None, external=None, sequential_async_handlers=False,
-                 sort_mode=None):
+                 sort_mode=None, **additional_params):
         self.name = name
         self.subscribers = MethodAwareWeakKeyOrderedDict()
         self.loop = loop or asyncio.get_event_loop()
@@ -109,6 +109,7 @@ class Signal(object):
         self._iproxies = weakref.WeakKeyDictionary()
         self._sequential_async_handlers = sequential_async_handlers
         self._sort_mode = sort_mode or HANDLERS_SORT_MODE.BOTTOMUP
+        self.additional_params = additional_params
 
     def __get__(self, instance, cls=None):
         if instance is not None:
