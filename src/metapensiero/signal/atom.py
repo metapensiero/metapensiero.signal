@@ -262,8 +262,8 @@ class Signal(object):
             try:
                 future.result()
             except Exception as e:
-                logger.exception("Error occurred while running event "
-                                 "callbacks for '%s' on %r", self.name, instance)
+                logger.error("Error occurred while running event callbacks"
+                             " for '%s' on %r: %s", self.name, instance, e)
 
     async def _sequential_handlers_exec(self, sync_results, async_results):
         for coro in async_results:
