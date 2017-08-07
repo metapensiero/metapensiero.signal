@@ -6,35 +6,17 @@
 .. :Copyright: Copyright (C) 2015 Alberto Berti
 ..
 
-=====================
- metapensiero.signal
-=====================
-
- :author: Alberto Berti
- :contact: alberto@metapensiero.it
- :license: GNU General Public License version 3 or later
-
-An event framework that is asyncio aware
-========================================
-
-.. contents::
-
-Goal
-----
+Introduction
+============
 
 This package implements a light event system that is able to deal with
 both synchronous and asynchronous event handlers. It can be used as-is
 or as member of a class.
 
-Installation
-------------
-
-To install the package execute the following command::
-
-  $ pip install metapensiero.signal
-
-Usage
------
+If you use it on Python 2.7 you'll get just synchronous handlers
+management, but there is a way to bind it to external event systems in
+a generic way. Check out the ``external.py`` submodule and the tests
+for more info.
 
 Basic functionality
 ~~~~~~~~~~~~~~~~~~~
@@ -342,8 +324,8 @@ beacuse you have to respect that:
 
   from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
 
-  c = dict(called=0, connect_handler=None, handler_called=0, handler_args=None,
-           disconnect_handler=None, handler2_called=0, handler2_args=None)
+  c = dict(called=0, connnect_handler=None, handler_called=0, handler_args=None,
+           disconnnect_handler=None, handler2_called=0, handler2_args=None)
 
   class A(metaclass=SignalAndHandlerInitMeta):
 
@@ -435,18 +417,3 @@ let's see and example:
        @handler
        def click_handler(self):
            self.clicked = True
-
-
-Testing
--------
-
-To run the tests you should run the following at the package root::
-
-  python setup.py test
-
-
-Build status
-------------
-
-.. image:: https://travis-ci.org/azazel75/metapensiero.signal.svg?branch=master
-    :target: https://travis-ci.org/azazel75/metapensiero.signal

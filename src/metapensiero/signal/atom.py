@@ -19,9 +19,71 @@ from .compat import isawaitable
 from .weak import MethodAwareWeakKeyOrderedDict
 from . import ExternalSignaller
 from . import SignalAndHandlerInitMeta
+from . import HANDLERS_SORT_MODE
 
 
 logger = logging.getLogger(__name__)
+
+
+class InstanceProxy(object):
+    """A small proxy used to get instance context when signal is a
+    member of a class.
+    """
+
+    def __init__(self, signal, instance):
+        self.signal = signal
+        self.instance = instance
+        self.subscribers = self.get_subscribers()
+
+    def clear(self):
+        """Remove all the connected handlers, for this instance"""
+        self.subscribers.clear()
+
+    def connect(self, cback):
+        "See signal"
+        return self.signal.connect(cback,
+                                   subscribers=self.subscribers,
+                                   instance=self.instance)
+
+    def disconnect(self, cback):
+        "See signal"
+        return self.signal.disconnect(cback,
+                                      subscribers=self.subscribers,
+                                      instance=self.instance)
+
+    def get_subscribers(self):
+        """Get per-instance subscribers from the signal.
+        """
+        data = self.signal.instance_subscribers
+        if self.instance not in data:
+            data[self.instance] = MethodAwareWeakKeyOrderedDict()
+        return data[self.instance]
+
+    @property
+    def loop(self):
+        return getattr(self.instance, 'loop', None)
+
+    def notify(self, *args, **kwargs):
+        "See signal"
+        loop = kwargs.pop('loop', self.loop)
+        return self.signal.notify(*args,
+                                  _subscribers=self.subscribers,
+                                  _instance=self.instance,
+                                  _loop=loop,
+                                  **kwargs)
+
+    def notify_no_ext(self, *args, **kwargs):
+        "Like notify but avoid notifying external managers"
+        loop = kwargs.pop('loop', self.loop)
+        return self.signal.notify(*args,
+                                  _subscribers=self.subscribers,
+                                  _instance=self.instance,
+                                  _loop=loop,
+                                  _notify_external=False,
+                                  **kwargs)
+
+    def __repr__(self):
+        return f'<Signal "{self.signal.name}" on {self.instance!r}>'
 
 
 class Signal(object):
@@ -31,65 +93,11 @@ class Signal(object):
     _name = None
     _sequential_async_handlers = False
 
-    class InstanceProxy(object):
-        """A small proxy used to get instance context when signal is a
-        member of a class.
-        """
-
-        def __init__(self, signal, instance):
-            self.signal = signal
-            self.instance = instance
-            self.subscribers = self.get_subscribers()
-
-        def clear(self):
-            """Remove all the connected handlers, for this instance"""
-            self.subscribers.clear()
-
-        def connect(self, cback):
-            "See signal"
-            return self.signal.connect(cback,
-                                       subscribers=self.subscribers,
-                                       instance=self.instance)
-
-        def disconnect(self, cback):
-            "See signal"
-            return self.signal.disconnect(cback,
-                                          subscribers=self.subscribers,
-                                          instance=self.instance)
-
-        def get_subscribers(self):
-            """Get per-instance subscribers from the signal.
-            """
-            data = self.signal.instance_subscribers
-            if self.instance not in data:
-                data[self.instance] = MethodAwareWeakKeyOrderedDict()
-            return data[self.instance]
-
-        @property
-        def loop(self):
-            return getattr(self.instance, 'loop', None)
-
-        def notify(self, *args, **kwargs):
-            "See signal"
-            loop = kwargs.pop('loop', self.loop)
-            return self.signal.notify(*args,
-                                      _subscribers=self.subscribers,
-                                      _instance=self.instance,
-                                      _loop=loop,
-                                      **kwargs)
-
-        def notify_no_ext(self, *args, **kwargs):
-            "Like notify but avoid notifying external managers"
-            loop = kwargs.pop('loop', self.loop)
-            return self.signal.notify(*args,
-                                      _subscribers=self.subscribers,
-                                      _instance=self.instance,
-                                      _loop=loop,
-                                      _notify_external=False,
-                                      **kwargs)
+    SORT_MODE = HANDLERS_SORT_MODE
 
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None, name=None,
-                 loop=None, external=None, sequential_async_handlers=False):
+                 loop=None, external=None, sequential_async_handlers=False,
+                 sort_mode=None, **additional_params):
         self.name = name
         self.subscribers = MethodAwareWeakKeyOrderedDict()
         self.loop = loop or asyncio.get_event_loop()
@@ -100,11 +108,13 @@ class Signal(object):
         self._fdisconnect = fdisconnect
         self._iproxies = weakref.WeakKeyDictionary()
         self._sequential_async_handlers = sequential_async_handlers
+        self._sort_mode = sort_mode or HANDLERS_SORT_MODE.BOTTOMUP
+        self.additional_params = additional_params
 
     def __get__(self, instance, cls=None):
         if instance is not None:
             if instance not in self._iproxies:
-                self._iproxies[instance] = self.InstanceProxy(self, instance)
+                self._iproxies[instance] = InstanceProxy(self, instance)
             result = self._iproxies[instance]
         else:
             result = self
@@ -126,10 +136,10 @@ class Signal(object):
         subscribers[cback] = True
 
     def _create_async_results(self, sync_results, async_results, loop):
-        """Create a future that will be fullfilled when all the results, both
+        """Create a future that will be fulfilled when all the results, both
         sync and async are computed.
 
-        If no async results need to be computed, the future fullfills immediately.
+        If no async results need to be computed, the future fulfills immediately.
         """
         if async_results:
             if self._sequential_async_handlers:
@@ -252,8 +262,8 @@ class Signal(object):
             try:
                 future.result()
             except Exception as e:
-                logger.exception("Error occurred while running event "
-                                 "callbacks for '%s' on %r", self.name, instance)
+                logger.error("Error occurred while running event callbacks"
+                             " for '%s' on %r: %s", self.name, instance, e)
 
     async def _sequential_handlers_exec(self, sync_results, async_results):
         for coro in async_results:

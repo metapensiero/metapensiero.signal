@@ -6,9 +6,14 @@
 # :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
+import enum
+
 
 class SignalError(Exception):
     pass
+
+
+HANDLERS_SORT_MODE = enum.Enum('HANDLERS_SORT_MODE', 'BOTTOMUP TOPDOWN')
 
 
 from .external import ExternalSignaller, ExternalSignallerAndHandler
@@ -17,4 +22,4 @@ from .atom import Signal
 
 __all__ = ('SignalError', 'Signal', 'SignalNameHandlerDecorator', 'handler',
            'SignalAndHandlerInitMeta', 'ExternalSignaller',
-           'ExternalSignallerAndHandler')
+           'ExternalSignallerAndHandler', 'HANDLERS_SORT_MODE')

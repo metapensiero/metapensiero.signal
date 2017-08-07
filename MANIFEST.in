@@ -1,2 +1,3 @@
 include *.rst
 include version.txt
+recursive-include doc *.rst

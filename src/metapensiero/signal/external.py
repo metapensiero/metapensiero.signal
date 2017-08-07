@@ -1,27 +1,23 @@
 # -*- coding: utf-8 -*-
-# :Project:  metapensiero.signal -- external signalling interface
-# :Created:    dom 27 dic 2015 23:22:53 CET
+# :Project:   metapensiero.signal -- external signalling interface
+# :Created:   dom 27 dic 2015 23:22:53 CET
 # :Author:    Alberto Berti <alberto@metapensiero.it>
 # :License:   GNU General Public License version 3 or later
+# :Copyright: Copyright (C) 2015 Alberto Berti
 #
-
-from __future__ import unicode_literals, absolute_import
-
-import six
 
 from abc import ABCMeta, abstractmethod
 
 
-@six.add_metaclass(ABCMeta)
-class ExternalSignaller(object):
+class ExternalSignaller(metaclass=ABCMeta):
     """An ExternalSignaler ABC, used to interface Signals with external
     event systems.
     """
 
     @abstractmethod
     def publish_signal(self, signal, instance, loop, args, kwargs):
-        """Publish a notification externally. This can be either a normal method or
-        a coroutine.
+        """Publish a notification externally. This can be either a normal
+        method or a coroutine.
         """
         pass
 
@@ -32,8 +28,8 @@ class ExternalSignaller(object):
 
 
 class ExternalSignallerAndHandler(ExternalSignaller):
-    """An ABC for interfacing a SignalAndHandlerInitMeta with an external
-    handling system.
+    """An ABC for interfacing a :class:`~.user.SignalAndHandlerInitMeta` with
+    an external handling system.
     """
 
     @abstractmethod
