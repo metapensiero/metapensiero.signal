@@ -18,8 +18,9 @@ from metapensiero.asyncio import transaction
 from .compat import isawaitable
 from .weak import MethodAwareWeakKeyOrderedDict
 from . import ExternalSignaller
-from . import SignalAndHandlerInitMeta
 from . import HANDLERS_SORT_MODE
+from . import SignalAndHandlerInitMeta
+from . import log_noisy_error
 
 
 logger = logging.getLogger(__name__)
@@ -262,8 +263,8 @@ class Signal(object):
             try:
                 future.result()
             except Exception as e:
-                logger.error("Error occurred while running event callbacks"
-                             " for '%s' on %r: %s", self.name, instance, e)
+                log_noisy_error(logger, "Error occurred while running event "
+                                "callbacks for '%s' on %r", self.name, instance)
 
     async def _sequential_handlers_exec(self, sync_results, async_results):
         for coro in async_results:
