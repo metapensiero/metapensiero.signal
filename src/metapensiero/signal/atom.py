@@ -288,8 +288,8 @@ class Signal(object):
             else:
                 result = self._fconnect(cback, subscribers, _connect)
             if isawaitable(result):
-                result = self._add_to_trans(result,
-                                            loop=self._loop_from_instance(instance))[0]
+                result = self._add_to_trans(
+                    result, loop=self._loop_from_instance(instance))[0]
         else:
             self._connect(subscribers, cback)
             result = None
@@ -317,8 +317,8 @@ class Signal(object):
             else:
                 result = self._fdisconnect(cback, subscribers, _disconnect)
             if isawaitable(result):
-                result = self._add_to_trans(result,
-                                            loop=self._loop_from_instance(instance))[0]
+                result = self._add_to_trans(
+                    result, loop=self._loop_from_instance(instance))[0]
         else:
             self._disconnect(subscribers, cback)
             result = None
@@ -372,7 +372,8 @@ class Signal(object):
         # @handler
         if instance is not None and self.name and isinstance(instance.__class__,
                                                     SignalAndHandlerInitMeta):
-            class_handlers = type(instance)._get_class_handlers(self.name, instance)
+            class_handlers = type(instance)._get_class_handlers(
+                self.name, instance)
             for ch in class_handlers:
                 # eventual methods are ephemeral and normally the following
                 # condition would always be True for methods but the dict used
@@ -400,8 +401,8 @@ class Signal(object):
             else:
                 result = self._fnotify(subscribers, cback, *args, **kwargs)
             if isawaitable(result):
-                result = self._add_to_trans(result,
-                                            loop=self._loop_from_instance(instance))[0]
+                result = self._add_to_trans(
+                    result, loop=self._loop_from_instance(instance))[0]
         else:
             result = self._notify(subscribers, instance, loop, args, kwargs,
                                   notify_external=notify_external)
