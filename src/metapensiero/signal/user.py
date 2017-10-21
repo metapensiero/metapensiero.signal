@@ -103,11 +103,13 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
             bases, '_signals', '_signal_handlers', '_signal_handlers_configs')
         cls._find_local_signals(signals, namespace)
         cls._find_local_handlers(handlers, namespace, configs)
-        cls._signal_handlers_sorted = cls._sort_handlers(signals, handlers, configs)
+        cls._signal_handlers_sorted = cls._sort_handlers(
+            signals, handlers, configs)
         configs = dict(configs)
         if signaller is not None:
             try:
-                signaller.register_class(cls, bases, namespace, signals, handlers)
+                signaller.register_class(
+                    cls, bases, namespace, signals, handlers)
             except Exception as cause:
                 new = SignalError(f"Error while registering class {cls!r}")
                 raise new from cause
@@ -177,13 +179,13 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
         return [getattr(instance, hname) for hname in handlers]
 
     def _sort_handlers(cls, signals, handlers, configs):
-        """Sort class defined handlers to give precedence to those declared at lower
-        level. ``config`` can contain two keys ``begin`` or ``end`` that will
-        further reposition the handler at the two extremes.
+        """Sort class defined handlers to give precedence to those declared at
+        lower level. ``config`` can contain two keys ``begin`` or ``end`` that
+        will further reposition the handler at the two extremes.
         """
         def macro_precedence_sorter(direction, hname):
-            """The default is to sort 'bottom_up', with lower level getting executed
-            first, but sometimes you need them reversed."""
+            """The default is to sort 'bottom_up', with lower level getting
+            executed first, but sometimes you need them reversed."""
             data = configs[hname]
             topdown_sort = direction == HANDLERS_SORT_MODE.TOPDOWN
             if topdown_sort:
@@ -206,7 +208,7 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
                     configs[hname]['level'] = level
                     sig_handlers.append(hname)
         for sig_name, sig_handlers in per_signal.items():
-            if sig_name in signals: # it may be on a mixin
+            if sig_name in signals:  # it may be on a mixin
                 sort_mode = signals[sig_name]._sort_mode
                 sig_handlers.sort(key=partial(macro_precedence_sorter,
                                               sort_mode))
@@ -218,7 +220,7 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
 
         ihandlers = cls._build_instance_handler_mapping(
             instance,
-            cls._signal_handlers
+             cls._signal_handlers
         )
         return isignals, ihandlers
 

@@ -34,7 +34,6 @@ setup(
         'Development Status :: 5 - Production/Stable',
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Intended Audience :: Developers",
@@ -47,8 +46,8 @@ setup(
     package_dir={'': 'src'},
     namespace_packages=['metapensiero'],
     install_requires=[
-        'metapensiero.asyncio.transaction>=0.5',
         'setuptools',
+        'weakreflist>=0.4'
     ],
     extras_require={
         'dev': [

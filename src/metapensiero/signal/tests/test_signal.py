@@ -40,13 +40,11 @@ def test_02_signal_with_async_functions(events):
     c = dict(called1=False, called2=False)
     events.define('h1', 'h2')
 
-    @asyncio.coroutine
-    def handler1(arg, kw):
+    async def handler1(arg, kw):
         c['called1'] = (arg, kw)
         events.h1.set()
 
-    @asyncio.coroutine
-    def handler2(arg, kw):
+    async def handler2(arg, kw):
         c['called2'] = (arg, kw)
         events.h2.set()
 
@@ -56,6 +54,7 @@ def test_02_signal_with_async_functions(events):
     assert len(signal.subscribers) == 2
 
     res = signal.notify(1, kw='a')
+
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(events.wait())
     assert c['called1'] == (1, 'a')
@@ -67,8 +66,7 @@ def test_03_signal_with_mixed_functions(events):
     c = dict(called1=False, called2=False)
     events.define('h1')
 
-    @asyncio.coroutine
-    def handler1(arg, kw):
+    async def handler1(arg, kw):
         c['called1'] = (arg, kw)
         events.h1.set()
 
@@ -96,8 +94,7 @@ def test_04_signal_with_methods(events):
 
         called = False
 
-        @asyncio.coroutine
-        def handler(self, arg, kw):
+        async def handler(self, arg, kw):
             self.called = (arg, kw)
             self.ev.set()
 
@@ -129,15 +126,13 @@ def test_05_class_defined_signal(events):
             self.click.connect(self.onclick)
             self.on_click_ev = events[name]
 
-        @asyncio.coroutine
-        def onclick(self, arg, kw):
+        async def onclick(self, arg, kw):
             self.called = (arg, kw)
             self.on_click_ev.set()
 
     c = dict(called1=False)
 
-    @asyncio.coroutine
-    def handler1(arg, kw):
+    async def handler1(arg, kw):
         c['called1'] = (arg, kw)
         events.h1.set()
 
@@ -190,8 +185,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
             self.a_ev = events['a_' + name]
 
         @handler('click')
-        @asyncio.coroutine
-        def onclick(self, arg, kw):
+        async def onclick(self, arg, kw):
             self.called = (arg, kw)
             self.a_ev.set()
             return 1
@@ -208,7 +202,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(events.a_a1.wait())
-    res = res.result()
+    res = res.results
 
     assert len(res) == 1
     assert a1.called == (1, 'a')
@@ -223,8 +217,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
             self.b_ev = events['b_' + name]
 
         @handler('click')
-        @asyncio.coroutine
-        def another_click_handler(self, arg, kw):
+        async def another_click_handler(self, arg, kw):
             self.calledb = (arg, kw)
             self.b_ev.set()
             return 2
@@ -238,7 +231,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
     events.a_a1.clear()
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(events.a_a1.wait())
-    res = res.result()
+    res = res.results
 
     assert len(res) == 1
 
@@ -249,7 +242,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(events.a_b1.wait())
     events.loop.run_until_complete(events.b_b1.wait())
-    res = res.result()
+    res = res.results
 
     # assert len(res) == 2
 
@@ -262,8 +255,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
     class C(B):
 
         @handler('click')
-        @asyncio.coroutine
-        def onclick(self, arg, kw):
+        async def onclick(self, arg, kw):
             self.called = (arg, kw)
             self.a_ev.set()
             return 3
@@ -277,7 +269,7 @@ def test_07_class_defined_signal_with_decorator_named(events):
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(events.a_c1.wait())
     events.loop.run_until_complete(events.b_c1.wait())
-    res = res.result()
+    res = res.results
 
     assert c1.called == (3, 'c')
     assert c1.calledb == (3, 'c')
@@ -288,8 +280,6 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
 
 def test_08_class_defined_signal_with_decorator_mixed(events):
-
-    from metapensiero.asyncio import transaction
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
@@ -304,8 +294,7 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
             self.called = (arg, kw)
 
         @handler('click')
-        @asyncio.coroutine
-        def click2(self, arg, kw):
+        async def click2(self, arg, kw):
             self.called2 = (arg, kw)
 
     a1 = A()
@@ -314,12 +303,10 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
     assert a1.called2 is False
 
     res = a1.click.notify(1, kw='a')
-    trans = transaction.begin()
     assert a1.called == (1, 'a')
     assert a1.called2 is False
 
     events.loop.run_until_complete(res)
-    events.loop.run_until_complete(trans.end())
 
     assert a1.called2 == (1, 'a')
 
@@ -353,7 +340,8 @@ def test_09_external_signaller(events):
     res = signal.notify('foo', zoo='bar')
     events.loop.run_until_complete(res)
 
-    assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
+    assert c['publish_called'] == (signal, None, asyncio.get_event_loop(),
+                                   ('foo',), {'zoo': 'bar'})
     assert c['register_called'] == (signal, 'foo')
 
 
@@ -365,8 +353,7 @@ def test_10_external_signaller_async(events):
 
     class MyExternalSignaller(object):
 
-        @asyncio.coroutine
-        def publish_signal(self, signal, instance, loop, args, kwargs):
+        async def publish_signal(self, signal, instance, loop, args, kwargs):
             c['publish_called'] = (signal, instance, loop, args, kwargs)
             events.publish.set()
 
@@ -388,7 +375,8 @@ def test_10_external_signaller_async(events):
     events.loop.run_until_complete(res)
     events.loop.run_until_complete(events.publish.wait())
 
-    assert c['publish_called'] == (signal, None, asyncio.get_event_loop(), ('foo',), {'zoo': 'bar'})
+    assert c['publish_called'] == (signal, None, asyncio.get_event_loop(),
+                                   ('foo',), {'zoo': 'bar'})
     assert c['register_called'] == (signal, 'foo')
 
 
@@ -636,8 +624,6 @@ def test_15_external_signaller_filters_handlers():
 
 def test_16_dot_handlers(events):
 
-    from metapensiero.asyncio import transaction
-
     class A(metaclass=SignalAndHandlerInitMeta):
 
         me = Signal()
@@ -655,12 +641,10 @@ def test_16_dot_handlers(events):
     assert a1.called is False
 
     res = a1.me.notify(1, kw='a')
-    trans = transaction.begin()
 
     assert a1.called == (1, 'a')
 
     events.loop.run_until_complete(res)
-    events.loop.run_until_complete(trans.end())
 
 
 @pytest.mark.asyncio
