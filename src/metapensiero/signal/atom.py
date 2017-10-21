@@ -86,7 +86,7 @@ class Signal(object):
     """
     _external_signaller = None
     _name = None
-    _sequential_async_handlers = False
+    _concurrent_handlers = False
 
     SORT_MODE = HANDLERS_SORT_MODE
 
