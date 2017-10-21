@@ -3,7 +3,7 @@
 .. :Created:   dom 09 ago 2015 12:57:35 CEST
 .. :Author:    Alberto Berti <alberto@metapensiero.it>
 .. :License:   GNU General Public License version 3 or later
-.. :Copyright: Copyright (C) 2015 Alberto Berti
+.. :Copyright: Copyright © 2015, 2016, 2017 Alberto Berti
 ..
 
 Introduction
@@ -13,10 +13,7 @@ This package implements a light event system that is able to deal with
 both synchronous and asynchronous event handlers. It can be used as-is
 or as member of a class.
 
-If you use it on Python 2.7 you'll get just synchronous handlers
-management, but there is a way to bind it to external event systems in
-a generic way. Check out the ``external.py`` submodule and the tests
-for more info.
+It supports Python 3.5+.
 
 Basic functionality
 ~~~~~~~~~~~~~~~~~~~
@@ -70,15 +67,13 @@ asynchronous handlers as well:
   import asyncio
   from metapensiero.signal import Signal
 
-  @asyncio.coroutine
-  def test_with_mixed_handlers():
+  async def test_with_mixed_handlers():
       signal = Signal()
       called1 = False
       called2 = False
       h1 = asyncio.Event()
 
-      @asyncio.coroutine
-      def handler1(arg, kw):
+      async def handler1(arg, kw):
           nonlocal called1
           called1 = (arg, kw)
           h1.set()
@@ -111,96 +106,6 @@ more than one async handler? Do we have to create an ``asyncio.Event``
 instance for all of them and then wait for everyone of those? And if
 the actual amount of async handlers isn't known in advance, what
 should we do?
-
-Transaction support
-~~~~~~~~~~~~~~~~~~~
-
-This is exactly where the sister package
-`metapensiero.asyncio.transaction`__ comes handy. The ``Signal`` class
-works with it to ensure that two coroutines (the one calling
-``notify()`` and ``handler1()``) can be synchronized.
-
-To do that the *outer* code has just to start a  *transaction* and
-if it is in place, the ``Signal`` class' code will automatically add
-any async event handler to it.
-
-To summarize this feature the previous example can be written also
-as:
-
-.. code:: python
-
-  import asyncio
-  from metapensiero.signal import Signal
-  from metapensiero.asyncio import transaction
-
-  @asyncio.coroutine
-  def test_with_mixed_handlers():
-      signal = Signal()
-      called1 = False
-      called2 = False
-
-      @asyncio.coroutine
-      def handler1(arg, kw):
-          nonlocal called1
-          called1 = (arg, kw)
-          h1.set()
-
-      def handler2(arg, kw):
-          nonlocal called2
-          called2 = (arg, kw)
-
-      signal.connect(handler1)
-      signal.connect(handler2)
-
-      trans = transaction.begin()
-      signal.notify(1, kw='a')
-      assert called2 == (1, 'a')
-      assert called1 == False
-      yield from trans.end()
-      assert called1 == (1, 'a')
-
-  loop = asyncio.get_event_loop()
-  loop.run_until_complete(test_with_mixed_handlers())
-
-Or, with python 3.5, we can use async context managers, so it becomes:
-
-.. code:: python
-
-  import asyncio
-  from metapensiero.signal import Signal
-  from metapensiero.asyncio import transaction
-
-  async def test_with_mixed_handlers():
-      signal = Signal()
-      called1 = False
-      called2 = False
-
-      async def handler1(arg, kw):
-          nonlocal called1
-          called1 = (arg, kw)
-          h1.set()
-
-      def handler2(arg, kw):
-          nonlocal called2
-          called2 = (arg, kw)
-
-      signal.connect(handler1)
-      signal.connect(handler2)
-
-      async with transaction.begin():
-          signal.notify(1, kw='a')
-          assert called2 == (1, 'a')
-          assert called1 == False
-      assert called1 == (1, 'a')
-
-  loop = asyncio.get_event_loop()
-  loop.run_until_complete(test_with_mixed_handlers())
-
-__ https://pypi.python.org/pypi/metapensiero.asyncio.transaction
-
-This way the calling context has a generic and scalable way of
-synchronize the block of code that runs ``notify()`` with the side effects,
-even when they are async and their number is unknown.
 
 Use signals with classes
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -236,7 +141,6 @@ Of course a class-level handler can be async:
 
   import asyncio
 
-  from metapensiero.asyncio import transaction
   from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
 
   class A(metaclass=SignalAndHandlerInitMeta):
@@ -252,22 +156,19 @@ Of course a class-level handler can be async:
           self.called = (arg, kw)
 
       @handler('click')
-      @asyncio.coroutine
-      def click2(self, arg, kw):
+      async def click2(self, arg, kw):
           self.called2 = (arg, kw)
 
   a1 = A()
 
-  @asyncio.coroutine
-  def runner():
+
+  async def runner():
       assert a1.called == False
       assert a1.called2 == False
 
-      trans = transaction.begin()
-      a1.click.notify(1, kw='a')
+      await a1.click.notify(1, kw='a')
       assert a1.called == (1, 'a')
       assert a1.called2 == False
-      yield from trans.end()
       assert a1.called2 == (1, 'a')
 
   loop = asyncio.get_event_loop()
@@ -391,13 +292,10 @@ where a notification has been delivered already. In such cases you may
 want to check for this situation in the wrapper and immediately notify
 the late callback if it's the case.
 
-The system offers a facility for doing exactly that using ``Signal``'s
-internal machinery, so handling possible coroutines by appending them
-to the on-going transaction. The ``connect`` and ``disconnect``
-wrappers parameter of the preceding example have another member, a
-function ``notify()`` that will take the  callback as first argument,
-and then any other argument that will be passed to the handler. So,
-let's see and example:
+The ``connect`` and ``disconnect`` wrappers parameter of the preceding example
+have another member, a function ``notify()`` that will take the callback as
+first argument, and then any other argument that will be passed to the
+handler. So, let's see and example:
 
 .. code:: python
 
