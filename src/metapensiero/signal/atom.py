@@ -84,7 +84,8 @@ class InstanceProxy:
             loop=loop, notify_external=False).run(*args, **kwargs)
 
     def __repr__(self):
-        return f'<Signal "{self.signal.name}" on {self.instance!r}>'
+        return ('<Signal "{self.signal.name}" '
+                ' on {self.instance!r}>').format(self=self)
 
 
 class Signal(object):

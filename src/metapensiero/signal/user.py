@@ -111,7 +111,8 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
                 signaller.register_class(
                     cls, bases, namespace, signals, handlers)
             except Exception as cause:
-                new = SignalError(f"Error while registering class {cls!r}")
+                new = SignalError(("Error while registering class "
+                                   "{cls!r}").format(cls=cls))
                 raise new from cause
         cls._check_local_handlers(signals, handlers, namespace, configs)
 
