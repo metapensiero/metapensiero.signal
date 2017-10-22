@@ -25,6 +25,12 @@ from . import log_noisy_error
 logger = logging.getLogger(__name__)
 
 
+async def _tractor_result(result):
+    while inspect.isawaitable(result):
+        result = await result
+    return result
+
+
 class InstanceProxy(object):
     """A small proxy used to get instance context when signal is a
     member of a class.
@@ -151,6 +157,8 @@ class Signal(object):
                 result = self._fconnect(instance, cback, subscribers, _connect)
             else:
                 result = self._fconnect(cback, subscribers, _connect)
+            if inspect.isawaitable(result):
+                result = _tractor_result(result)
         else:
             self._connect(subscribers, cback)
             result = None
@@ -177,6 +185,8 @@ class Signal(object):
                                            _disconnect)
             else:
                 result = self._fdisconnect(cback, subscribers, _disconnect)
+            if inspect.isawaitable(result):
+                result = _tractor_result(result)
         else:
             self._disconnect(subscribers, cback)
             result = None
@@ -326,9 +336,12 @@ class Notifier:
             else:
                 # if a notify wrapper is defined, defer notification to it,
                 # a callback to execute the default notification process
-                return self.notify_wrapper(self.subscribers,
-                                           self.notify_all_subscribers,
-                                           *args, **kwargs)
+                result = self.notify_wrapper(self.subscribers,
+                                             self.notify_all_subscribers,
+                                             *args, **kwargs)
+                if inspect.isawaitable(result):
+                    result = _tractor_result(result)
+                return result
         except:
             if __debug__:
                 logger.exception('Error while notifying')
