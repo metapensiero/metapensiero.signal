@@ -123,7 +123,8 @@ class Signal(object):
         return result
 
     def _connect(self, subscribers, cback):
-        subscribers.append(cback)
+        if cback not in subscribers:
+            subscribers.append(cback)
 
     def _disconnect(self, subscribers, cback):
         if cback in subscribers:
@@ -138,7 +139,7 @@ class Signal(object):
 
     def _notify_one(self, instance, cback, *args, **kwargs):
         loop = self._loop_from_instance(instance)
-        return self.prepare_notification((cback,), instance=instance,
+        return self.prepare_notification(subscribers=(cback,), instance=instance,
                                          loop=loop).run(*args, **kwargs)
 
     def connect(self, cback, subscribers=None, instance=None):
