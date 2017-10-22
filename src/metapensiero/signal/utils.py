@@ -11,7 +11,7 @@ import asyncio
 import inspect
 
 
-class MultipleResults:
+class MultipleResults(Awaitable):
     """An utility class containing multiple results, either *synchronous* or
     *asynchronous*."""
 
@@ -51,9 +51,6 @@ class MultipleResults:
         self.results = tuple(self._results)
         self.done = True
         return self.results
-
-
-Awaitable.register(MultipleResults)
 
 
 class TokenClass:
