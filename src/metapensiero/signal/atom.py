@@ -31,7 +31,7 @@ async def _tractor_result(result):
     return result
 
 
-class InstanceProxy(object):
+class InstanceProxy:
     """A small proxy used to get instance context when signal is a
     member of a class.
     """
