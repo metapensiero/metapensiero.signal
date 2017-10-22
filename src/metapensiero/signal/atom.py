@@ -7,19 +7,16 @@
 #
 
 import asyncio
-import contextlib
 from functools import partial
 import logging
 import inspect
 import weakref
 
-from .compat import isawaitable
 from .utils import MultipleResults, NoResult
 from .weak import MethodAwareWeakList
 from . import ExternalSignaller
 from . import HANDLERS_SORT_MODE
 from . import SignalAndHandlerInitMeta
-from . import log_noisy_error
 
 
 logger = logging.getLogger(__name__)
