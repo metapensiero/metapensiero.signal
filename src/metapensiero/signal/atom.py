@@ -253,7 +253,7 @@ class Signal(object):
                 fnotify = self._fnotify
             else:
                 fnotify = partial(self._fnotify, instance)
-        return Notifier(self_subscribers,
+        return Notifier(self, self_subscribers,
                         concurrent=self._concurrent_handlers,
                         loop=loop, notify_wrapper=fnotify)
 
@@ -278,8 +278,9 @@ class Notifier:
     :keyword notify_wrapper: an optional callable to call as a wrapper
     """
 
-    def __init__(self, subscribers, *, concurrent=False, loop=None,
+    def __init__(self, signal, subscribers, *, concurrent=False, loop=None,
                  notify_wrapper=None):
+        self.signal = signal
         self.subscribers = subscribers
         self.concurrent = concurrent
         self.loop = loop
@@ -309,7 +310,7 @@ class Notifier:
                 results += res.results
             elif res is not NoResult:
                 results.append(res)
-        return MultipleResults(results, concurrent=self.concurrent)
+        return MultipleResults(results, concurrent=self.concurrent, owner=self)
 
     def run(self, *args, **kwargs):
         """Call all the registered handlers with the arguments passed.

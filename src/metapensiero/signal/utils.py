@@ -19,7 +19,8 @@ class MultipleResults:
     done = False
     has_async = False
 
-    def __init__(self, iterable=None, *, concurrent=False):
+    def __init__(self, iterable=None, *, concurrent=False, owner=None):
+        self.owner = owner
         self._results = list(iterable)
         self._coro_ixs = tuple(ix for ix, e in enumerate(self._results)
                                if inspect.isawaitable(e))
