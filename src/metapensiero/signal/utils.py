@@ -31,7 +31,6 @@ class MultipleResults:
             self.results = tuple(self._results)
             self.done = True
             self.has_async = False
-            self._ct = None
 
     def __await__(self):
         task = self._completion_task(
