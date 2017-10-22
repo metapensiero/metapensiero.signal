@@ -27,7 +27,17 @@ HANDLERS_SORT_MODE = enum.Enum('HANDLERS_SORT_MODE', 'BOTTOMUP TOPDOWN')
 from .external import ExternalSignaller, ExternalSignallerAndHandler
 from .user import SignalNameHandlerDecorator, handler, SignalAndHandlerInitMeta
 from .atom import Signal
+from .utils import MultipleResults, NoResult
 
-__all__ = ('SignalError', 'Signal', 'SignalNameHandlerDecorator', 'handler',
-           'SignalAndHandlerInitMeta', 'ExternalSignaller',
-           'ExternalSignallerAndHandler', 'HANDLERS_SORT_MODE')
+__all__ = (
+    'ExternalSignaller',
+    'ExternalSignallerAndHandler',
+    'HANDLERS_SORT_MODE',
+    'MultipleResults',
+    'NoResult'
+    'Signal',
+    'SignalAndHandlerInitMeta',
+    'SignalError',
+    'SignalNameHandlerDecorator',
+    'handler',
+)
