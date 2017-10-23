@@ -101,10 +101,24 @@ async def pull_result(result):
     while inspect.isawaitable(result):
         result = await result
     return result
+
+
 class SignalError(Exception):
     """Generic error raised during signal operations"""
 
 
 class HANDLERS_SORT_MODE(enum.Enum):
+    """Stores the types of sort order available when retrieving class-based
+    handlers. This is meaningful when using `~.atom.Signal` in together with
+    classes that use `~.user.SignalAndHandlerInitMeta` as their
+    ``metaclass``.
+    """
+
     BOTTOMUP = 1
+    """The class level handlers are sort from the "oldest" to the
+    "newest". Handlers defined in the ancestor classes will be executed before
+    of those on child classes."""
     TOPDOWN = 2
+    """The class level handlers are sort from the "newest" to the
+    "oldest". Handlers defined in the child classes will be executed before
+    of those on ancestor classes."""

@@ -87,6 +87,8 @@ class Signal(object):
     _concurrent_handlers = False
 
     SORT_MODE = HANDLERS_SORT_MODE
+    """All the available handlers sort modes. See `~.utils.HANDLERS_SORT_MODE`.
+    """
 
     def __init__(self, fnotify=None, fconnect=None, fdisconnect=None,
                  name=None, loop=None, external=None,
@@ -104,6 +106,7 @@ class Signal(object):
         self._concurrent_handlers = concurrent_handlers
         self._sort_mode = sort_mode or HANDLERS_SORT_MODE.BOTTOMUP
         self.additional_params = additional_params
+        """additional parameter passed at construction time"""
 
     def __get__(self, instance, cls=None):
         if instance is not None:
@@ -137,6 +140,9 @@ class Signal(object):
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
         Any handler added can be a coroutine.
+
+        :param cback: the callback (or *handler*) to be added to the set
+        :returns: ``None`` or the value returned by the corresponding wrapper
         """
         if subscribers is None:
             subscribers = self.subscribers
@@ -165,6 +171,9 @@ class Signal(object):
     def disconnect(self, cback, subscribers=None, instance=None):
         """Remove a previously added function or method from the set of the
         signal's handlers.
+
+        :param cback: the callback (or *handler*) to be added to the set
+        :returns: ``None`` or the value returned by the corresponding wrapper
         """
         if subscribers is None:
             subscribers = self.subscribers
@@ -190,6 +199,9 @@ class Signal(object):
     def ext_publish(self, instance, loop, *args, **kwargs):
         """If 'external_signaller' is defined, calls it's publish method to
         notify external event systems.
+
+        This is for internal usage only, but it's doumented because it's part
+        of the interface with external notification systems.
         """
         if self.external_signaller is not None:
             # Assumes that the loop is managed by the external handler
@@ -198,6 +210,7 @@ class Signal(object):
 
     @property
     def external_signaller(self):
+        """The registered `~.external.ExternalSignaller`."""
         return self._external_signaller
 
     @external_signaller.setter
@@ -210,6 +223,8 @@ class Signal(object):
 
     @property
     def name(self):
+        """The *name* of the signal used in conjunction with external
+        notification systems."""
         return self._name
 
     @name.setter
@@ -219,11 +234,16 @@ class Signal(object):
             self._external_signaller.register_signal(self, value)
 
     def notify(self, *args, **kwargs):
-        """Call all the registered handlers with the arguments passed."""
+        """Call all the registered handlers with the arguments passed.
+
+        :returns: an instance of `~.utils.MultipleResults` or the result of
+          the execution of the corresponding wrapper function
+        """
         return self.prepare_notification().run(*args, **kwargs)
 
     def prepare_notification(self, *, subscribers=None, instance=None,
                              loop=None, notify_external=True):
+        """Sets up a and configures a `Notifier` instance."""
         # merge callbacks added to the class level with those added to the
         # instance, giving the formers precedence while preserving overall order
         self_subscribers = self.subscribers.copy()
