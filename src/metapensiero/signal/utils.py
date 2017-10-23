@@ -18,10 +18,11 @@ class MultipleResults(Awaitable):
     results = None
     done = False
     has_async = False
+    concurrent = False
 
     def __init__(self, iterable=None, *, concurrent=False, owner=None):
         self.owner = owner
-        self._concurrent = concurrent
+        self.concurrent = concurrent
         self._results = list(iterable)
         self._coro_ixs = tuple(ix for ix, e in enumerate(self._results)
                                if inspect.isawaitable(e))
@@ -35,11 +36,11 @@ class MultipleResults(Awaitable):
     def __await__(self):
         task = self._completion_task(
             map(self._results.__getitem__, self._coro_ixs),
-            concurrent=self._concurrent)
+            concurrent=self.concurrent)
         return task.__await__()
 
     async def _completion_task(self, coro_iter=None, concurrent=False):
-        if not self.done:
+        if not self.done and coro_iter is not None:
             if concurrent:
                 results = await asyncio.gather(*coro_iter)
                 for ix, res in zip(self._coro_ixs, results):
