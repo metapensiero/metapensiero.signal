@@ -6,7 +6,6 @@
 # :Copyright: Copyright (C) 2015 Alberto Berti
 #
 
-import enum
 import logging
 
 
@@ -17,24 +16,18 @@ def log_noisy_error(logger, *args, **kwargs):
     NOISY_ERROR_LOGGER(logger, *args, **kwargs)
 
 
-class SignalError(Exception):
-    pass
-
-
-HANDLERS_SORT_MODE = enum.Enum('HANDLERS_SORT_MODE', 'BOTTOMUP TOPDOWN')
-
-
 from .external import ExternalSignaller, ExternalSignallerAndHandler
 from .user import SignalNameHandlerDecorator, handler, SignalAndHandlerInitMeta
 from .atom import Signal
-from .utils import MultipleResults, NoResult
+from .utils import HANDLERS_SORT_MODE, MultipleResults, NoResult, SignalError
+
 
 __all__ = (
     'ExternalSignaller',
     'ExternalSignallerAndHandler',
     'HANDLERS_SORT_MODE',
     'MultipleResults',
-    'NoResult'
+    'NoResult',
     'Signal',
     'SignalAndHandlerInitMeta',
     'SignalError',

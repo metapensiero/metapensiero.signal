@@ -8,6 +8,7 @@
 
 from collections.abc import Awaitable
 import asyncio
+import enum
 import inspect
 
 
@@ -100,3 +101,10 @@ async def pull_result(result):
     while inspect.isawaitable(result):
         result = await result
     return result
+class SignalError(Exception):
+    """Generic error raised during signal operations"""
+
+
+class HANDLERS_SORT_MODE(enum.Enum):
+    BOTTOMUP = 1
+    TOPDOWN = 2

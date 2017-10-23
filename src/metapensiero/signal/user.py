@@ -11,7 +11,7 @@ from collections import ChainMap, defaultdict
 from functools import partial
 
 from .external import ExternalSignallerAndHandler
-from . import HANDLERS_SORT_MODE, SignalError
+from .utils import HANDLERS_SORT_MODE, SignalError
 
 
 SPEC_CONTAINER_MEMBER_NAME = '_publish'

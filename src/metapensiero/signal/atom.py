@@ -12,10 +12,9 @@ import logging
 import inspect
 import weakref
 
-from .utils import MultipleResults, NoResult, pull_result
+from .external import ExternalSignaller
+from .utils import HANDLERS_SORT_MODE, MultipleResults, NoResult, pull_result
 from .weak import MethodAwareWeakList
-from . import ExternalSignaller
-from . import HANDLERS_SORT_MODE
 from . import SignalAndHandlerInitMeta
 
 
