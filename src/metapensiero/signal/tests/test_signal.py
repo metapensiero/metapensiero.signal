@@ -448,7 +448,7 @@ def test_12_connect_wrapper(events):
     asignal = Signal()
 
     @asignal.on_connect
-    def asignal(handler, subscribers, connect):
+    def asignal(handler, subscribers, connect, notify):
         c['called'] += 1
         c['connect_handler'] = handler
         assert len(subscribers) == 0
@@ -477,7 +477,7 @@ def test_12_connect_wrapper(events):
         click = Signal()
 
         @click.on_connect
-        def click(self, handler, subscribers, connect):
+        def click(self, handler, subscribers, connect, notify):
             c['called'] += 1
             c['connect_handler'] = handler
             assert len(subscribers) == 0
@@ -515,7 +515,7 @@ def test_13_disconnect_wrapper():
     asignal = Signal()
 
     @asignal.on_disconnect
-    def asignal(handler, subscribers, disconnect):
+    def asignal(handler, subscribers, disconnect, notify):
         c['called'] += 1
         c['disconnect_handler'] = handler
         assert len(subscribers) == 1
@@ -540,7 +540,7 @@ def test_13_disconnect_wrapper():
         click = Signal()
 
         @click.on_disconnect
-        def click(self, handler, subscribers, disconnect):
+        def click(self, handler, subscribers, disconnect, notify):
             c['called'] += 1
             c['disconnect_handler'] = handler
             assert len(subscribers) == 1

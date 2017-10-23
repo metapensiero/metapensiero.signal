@@ -145,11 +145,12 @@ class Signal(object):
             def _connect(cback):
                 self._connect(subscribers, cback)
 
-            _connect.notify = partial(self._notify_one, instance)
+            notify = partial(self._notify_one, instance)
             if instance is not None:
-                result = self._fconnect(instance, cback, subscribers, _connect)
+                result = self._fconnect(instance, cback, subscribers,
+                                        _connect, notify)
             else:
-                result = self._fconnect(cback, subscribers, _connect)
+                result = self._fconnect(cback, subscribers, _connect, notify)
             if inspect.isawaitable(result):
                 result = pull_result(result)
         else:
@@ -172,12 +173,13 @@ class Signal(object):
             def _disconnect(cback):
                 self._disconnect(subscribers, cback)
 
-            _disconnect.notify = partial(self._notify_one, instance)
+            notify = partial(self._notify_one, instance)
             if instance is not None:
                 result = self._fdisconnect(instance, cback, subscribers,
-                                           _disconnect)
+                                           _disconnect, notify)
             else:
-                result = self._fdisconnect(cback, subscribers, _disconnect)
+                result = self._fdisconnect(cback, subscribers, _disconnect,
+                                           notify)
             if inspect.isawaitable(result):
                 result = pull_result(result)
         else:
