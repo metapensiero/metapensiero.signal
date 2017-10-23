@@ -240,7 +240,7 @@ beacuse you have to respect that:
            return 'mynotify'
 
        @click.on_connect
-       def click(self, handler, subscribers, connect):
+       def click(self, handler, subscribers, connect, notify):
            c['called'] += 1
            c['connect_handler'] = handler
            assert len(subscribers) == 0
@@ -248,7 +248,7 @@ beacuse you have to respect that:
            return 'myconnect'
 
        @click.on_disconnect
-       def click(self, handler, subscribers, disconnect):
+       def click(self, handler, subscribers, disconnect, notify):
            c['called'] += 1
            c['disconnect_handler'] = handler
            assert len(subscribers) == 1
@@ -293,9 +293,9 @@ want to check for this situation in the wrapper and immediately notify
 the late callback if it's the case.
 
 The ``connect`` and ``disconnect`` wrappers parameter of the preceding example
-have another member, a function ``notify()`` that will take the callback as
-first argument, and then any other argument that will be passed to the
-handler. So, let's see and example:
+will be called with one more parameter, a function ``notify()`` that will take
+the callback as first argument, and then any other argument that will be
+passed to the handler. So, let's see and example:
 
 .. code:: python
 
@@ -304,9 +304,9 @@ handler. So, let's see and example:
        click = Signal()
 
        @click.on_connect
-       def click(self, handler, subscribers, connect):
+       def click(self, handler, subscribers, connect, notify):
            if self.clicked:
-               connect.notify(handler)
+               notify(handler)
            connect(handler)
 
        def __init__(self):
