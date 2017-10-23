@@ -59,6 +59,19 @@ class TokenClass:
     def __bool__(self):
         return False
 
+
 NoResult = TokenClass()
 """A value that is returned by a callable when there's no return value and
 when ``None`` can be considered a value."""
+
+
+async def pull_result(result):
+    """`An utility coroutine generator to `await`` on an awaitable until the
+    result is not an awaitable anymore, and return that.
+
+    :param result: an awaitable
+    :returns: a value that isn't an awaitable
+    """
+    while inspect.isawaitable(result):
+        result = await result
+    return result

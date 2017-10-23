@@ -12,7 +12,7 @@ import logging
 import inspect
 import weakref
 
-from .utils import MultipleResults, NoResult
+from .utils import MultipleResults, NoResult, pull_result
 from .weak import MethodAwareWeakList
 from . import ExternalSignaller
 from . import HANDLERS_SORT_MODE
@@ -20,12 +20,6 @@ from . import SignalAndHandlerInitMeta
 
 
 logger = logging.getLogger(__name__)
-
-
-async def _tractor_result(result):
-    while inspect.isawaitable(result):
-        result = await result
-    return result
 
 
 class InstanceProxy:
@@ -157,7 +151,7 @@ class Signal(object):
             else:
                 result = self._fconnect(cback, subscribers, _connect)
             if inspect.isawaitable(result):
-                result = _tractor_result(result)
+                result = pull_result(result)
         else:
             self._connect(subscribers, cback)
             result = None
@@ -185,7 +179,7 @@ class Signal(object):
             else:
                 result = self._fdisconnect(cback, subscribers, _disconnect)
             if inspect.isawaitable(result):
-                result = _tractor_result(result)
+                result = pull_result(result)
         else:
             self._disconnect(subscribers, cback)
             result = None
@@ -339,7 +333,7 @@ class Notifier:
                                              self.notify_all_subscribers,
                                              *args, **kwargs)
                 if inspect.isawaitable(result):
-                    result = _tractor_result(result)
+                    result = pull_result(result)
                 return result
         except:
             if __debug__:
