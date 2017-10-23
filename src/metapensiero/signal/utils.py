@@ -50,6 +50,7 @@ class MultipleResults(Awaitable):
                     res = await coro
                     self._results[ix] = res
         self.results = tuple(self._results)
+        del self._results
         self.done = True
         return self.results
 
