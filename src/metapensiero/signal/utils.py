@@ -13,13 +13,34 @@ import inspect
 
 class MultipleResults(Awaitable):
     """An utility class containing multiple results, either *synchronous* or
-    *asynchronous*."""
+    *asynchronous*. It accepts an iterable as main parameter that can contain
+    actual values or *awaitables*. If any of the latter is present, it will be
+    needed to ``await`` on the instance to obtain the complete set of values.
+
+    When that is done the final results are available on the ``results``
+    member and are also returned by the ``await`` expression.
+
+    It is possible to choose how to evaluate the *awaitables*, either
+    concurrently or sequentially.
+
+    :param iterable: the incoming iterable containing the results
+    :keyword concurrent: a flag indicating if the evaluation of the *awaitables*
+      has to be done concurrently or sequentially
+    :keyword owner: the optional creator instance
+    """
 
     results = None
+    """Contains the final results."""
     done = False
+    """It's ``True`` when the results are ready for consumption."""
     has_async = False
+    """``True`` if the original result set contained awaitables."""
     concurrent = False
+    """``True`` if the evaluation of the awaitables is done concurrently using
+    `asyncio.gather`, it's done sequentially by default."""
     owner = None
+    """The optional creator of the instance passed in as a parameter, usually
+    the `~.atom.Notifier` that created it."""
 
     def __init__(self, iterable=None, *, concurrent=False, owner=None):
         if owner is not None:

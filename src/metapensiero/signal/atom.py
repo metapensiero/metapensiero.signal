@@ -80,7 +80,8 @@ class InstanceProxy:
 
 
 class Signal(object):
-    """ The atom of event handling
+    """The core class. It collect subscriber *callables*, both normal and
+    *awaitables* to execute them when its `~Signal.notify()` method is called.
     """
     _external_signaller = None
     _name = None
