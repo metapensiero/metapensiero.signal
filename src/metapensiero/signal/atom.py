@@ -286,7 +286,7 @@ class Notifier:
     def __init__(self, signal, subscribers, *, concurrent=False, loop=None,
                  notify_wrapper=None):
         self.signal = signal
-        self.subscribers = subscribers
+        self.subscribers = list(subscribers)
         self.concurrent = concurrent
         self.loop = loop
         self.notify_wrapper = notify_wrapper
