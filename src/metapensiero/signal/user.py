@@ -9,6 +9,7 @@
 from abc import ABCMeta
 from collections import ChainMap, defaultdict
 from functools import partial
+from weakref import WeakSet
 
 from .external import ExternalSignallerAndHandler
 from .utils import HANDLERS_SORT_MODE, SignalError
@@ -96,8 +97,16 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
     _signal_handlers_configs = None
     """Container for additional handler config."""
 
+    _registered_classes = WeakSet()
+    """Store a weak ref of the classes already managed."""
+
     def __init__(cls, name, bases, namespace):
+        if cls not in cls._registered_classes:
+            cls._register_class(bases, namespace)
+            cls._registered_classes.add(cls)
         super().__init__(name, bases, namespace)
+
+    def _register_class(cls, bases, namespace):
         # collect signals and handlers from the bases, overwriting them from
         # right to left
         signaller = cls._external_signaller_and_handler
