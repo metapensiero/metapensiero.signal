@@ -69,6 +69,8 @@ class InheritanceToolsMeta(ABCMeta):
             result.append(ChainMap({}, *maps))
         if merge:
             result = [dict(map) for map in result]
+        if len(names) == 1:
+            return result[0]
         return result
 
 
