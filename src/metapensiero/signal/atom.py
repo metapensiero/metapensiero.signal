@@ -13,7 +13,7 @@ import inspect
 import weakref
 
 from .external import ExternalSignaller
-from .utils import HANDLERS_SORT_MODE, MultipleResults, NoResult, pull_result
+from .utils import Executor, HANDLERS_SORT_MODE, pull_result
 from .weak import MethodAwareWeakList
 from . import SignalAndHandlerInitMeta
 
@@ -243,7 +243,7 @@ class Signal(object):
 
     def prepare_notification(self, *, subscribers=None, instance=None,
                              loop=None, notify_external=True):
-        """Sets up a and configures a `Notifier` instance."""
+        """Sets up a and configures an `Executor` instance."""
         # merge callbacks added to the class level with those added to the
         # instance, giving the formers precedence while preserving overall order
         self_subscribers = self.subscribers.copy()
@@ -278,9 +278,9 @@ class Signal(object):
                 fnotify = self._fnotify
             else:
                 fnotify = partial(self._fnotify, instance)
-        return Notifier(self, self_subscribers,
+        return Executor(self, self_subscribers,
                         concurrent=self._concurrent_handlers,
-                        loop=loop, notify_wrapper=fnotify)
+                        loop=loop, exec_wrapper=fnotify)
 
     def on_connect(self, fconnect):
         "On connect optional wrapper decorator"
@@ -291,77 +291,3 @@ class Signal(object):
         "On disconnect optional wrapper decorator"
         self._fdisconnect = fdisconnect
         return self
-
-
-class Notifier:
-    """A configurable notifier.
-
-    :param subscribers: an iterable containing the handlers to execute
-    :keyword bool concurrent: optional flag indicating if the *asynchronous*
-      handlers have to be executed concurrently or sequentially (the default)
-    :keyword loop_: optional loop
-    :keyword notify_wrapper: an optional callable to call as a wrapper
-    """
-
-    def __init__(self, signal, subscribers, *, concurrent=False, loop=None,
-                 notify_wrapper=None):
-        self.signal = signal
-        self.subscribers = list(subscribers)
-        self.concurrent = concurrent
-        self.loop = loop
-        self.notify_wrapper = notify_wrapper
-
-    def _adapt_call_params(self, func, args, kwargs):
-        signature = inspect.signature(func, follow_wrapped=False)
-        has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD
-                        for n, p in signature.parameters.items())
-        if has_varkw:
-            bind = signature.bind_partial(*args, **kwargs)
-        else:
-            bind = signature.bind_partial(*args,
-                                          **{k: v for k, v in kwargs.items()
-                                             if k in signature.parameters})
-            bind.apply_defaults()
-        return bind
-
-    def notify_all_subscribers(self, *args, **kwargs):
-        results = []
-        for handler in self.subscribers:
-            if isinstance(handler, weakref.ref):
-                handler = handler()
-            bind = self._adapt_call_params(handler, args, kwargs)
-            res = handler(*bind.args, **bind.kwargs)
-            if isinstance(res, MultipleResults):
-                results += res.results
-            elif res is not NoResult:
-                results.append(res)
-        return MultipleResults(results, concurrent=self.concurrent, owner=self)
-
-    def run(self, *args, **kwargs):
-        """Call all the registered handlers with the arguments passed.
-        If this signal is a class member, call also the handlers registered
-        at class-definition time. If an external publish function is
-        supplied, call it with the provided arguments.
-
-        :returns: an instance of `~.utils.MultipleResults`
-        """
-        try:
-            if self.notify_wrapper is None:
-                return self.notify_all_subscribers(*args, **kwargs)
-            else:
-                # if a notify wrapper is defined, defer notification to it,
-                # a callback to execute the default notification process
-                result = self.notify_wrapper(self.subscribers,
-                                             self.notify_all_subscribers,
-                                             *args, **kwargs)
-                if inspect.isawaitable(result):
-                    result = pull_result(result)
-                return result
-        except:
-            if __debug__:
-                logger.exception('Error while notifying')
-            else:
-                logger.error('Error while notifying')
-            raise
-
-    __call__ = run

@@ -10,6 +10,90 @@ from collections.abc import Awaitable
 import asyncio
 import enum
 import inspect
+import logging
+import weakref
+
+
+logger = logging.getLogger(__name__)
+
+
+class Executor:
+    """A configurable executor of callable endpoints.
+
+    :param owner: an object to reference as owner, or producer
+    :param endpoints: an iterable containing the handlers to execute
+    :keyword bool concurrent: optional flag indicating if the *asynchronous*
+      handlers have to be executed concurrently or sequentially (the default)
+    :keyword loop: optional loop
+    :keyword exec_wrapper: an optional callable to call as a wrapper
+    """
+
+    def __init__(self, owner, endpoints, *, concurrent=False, loop=None,
+                 exec_wrapper=None, adapt_params=True):
+        self.owner = owner
+        self.endpoints = list(endpoints)
+        self.concurrent = concurrent
+        self.loop = loop
+        self.exec_wrapper = exec_wrapper
+        self.adapt_params = adapt_params
+
+    def _adapt_call_params(self, func, args, kwargs):
+        signature = inspect.signature(func, follow_wrapped=False)
+        has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD
+                        for n, p in signature.parameters.items())
+        if has_varkw:
+            bind = signature.bind_partial(*args, **kwargs)
+        else:
+            bind = signature.bind_partial(*args,
+                                          **{k: v for k, v in kwargs.items()
+                                             if k in signature.parameters})
+            bind.apply_defaults()
+        return bind
+
+    def exec_all_endpoints(self, *args, **kwargs):
+        results = []
+        for handler in self.endpoints:
+            if isinstance(handler, weakref.ref):
+                handler = handler()
+            if self.adapt_params:
+                bind = self._adapt_call_params(handler, args, kwargs)
+                res = handler(*bind.args, **bind.kwargs)
+            else:
+                res = handler(*args, **kwargs)
+            if isinstance(res, MultipleResults):
+                results += res.results
+            elif res is not NoResult:
+                results.append(res)
+        return MultipleResults(results, concurrent=self.concurrent, owner=self)
+
+    def run(self, *args, **kwargs):
+        """Call all the registered handlers with the arguments passed.
+        If this signal is a class member, call also the handlers registered
+        at class-definition time. If an external publish function is
+        supplied, call it with the provided arguments.
+
+        :returns: an instance of `~.utils.MultipleResults`
+        """
+        try:
+            if self.exec_wrapper is None:
+                return self.exec_all_endpoints(*args, **kwargs)
+            else:
+                # if a exec wrapper is defined, defer notification to it,
+                # a callback to execute the default notification process
+                result = self.exec_wrapper(self.endpoints,
+                                             self.exec_all_endpoints,
+                                             *args, **kwargs)
+                if inspect.isawaitable(result):
+                    result = pull_result(result)
+                return result
+        except:
+            if __debug__:
+                logger.exception('Error while executing')
+            else:
+                logger.error('Error while executing')
+            raise
+
+    __call__ = run
 
 
 class MultipleResults(Awaitable):
