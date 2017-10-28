@@ -31,6 +31,10 @@ class InstanceProxy:
         self.instance = instance
         self.subscribers = self.get_subscribers()
 
+    def __repr__(self):
+        return ('<Signal "{self.signal.name}" '
+                ' on {self.instance!r}>').format(self=self)
+
     def clear(self):
         """Remove all the connected handlers, for this instance"""
         self.subscribers.clear()
@@ -72,10 +76,6 @@ class InstanceProxy:
         return self.signal.prepare_notification(
             subscribers=self.subscribers, instance=self.instance,
             loop=loop, notify_external=False).run(*args, **kwargs)
-
-    def __repr__(self):
-        return ('<Signal "{self.signal.name}" '
-                ' on {self.instance!r}>').format(self=self)
 
 
 class Signal(object):
