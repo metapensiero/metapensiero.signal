@@ -830,3 +830,50 @@ async def test_17_handlers_sorting():
     assert called.index('z') == 1
     assert called.index('a') == 2
     assert called.index('b') == 0
+
+
+def test_18_notify_prepared_dont_signal_external():
+
+    c = dict(publish_called=False, handler_called=False)
+
+    from metapensiero.signal import ExternalSignallerAndHandler
+
+    class MyExternalSignaller(object):
+
+        def publish_signal(self, signal, instance, loop, args, kwargs):
+            c['publish_called'] = True
+
+        def register_signal(self, signal, name):
+            pass
+
+        def register_class(self, cls, bases, namespace, signals, handlers):
+            pass
+
+    ExternalSignallerAndHandler.register(MyExternalSignaller)
+    signaller = MyExternalSignaller()
+
+    MySignalMeta = SignalAndHandlerInitMeta.with_external(signaller,
+                                                          'MySignalMeta')
+
+    class A(metaclass=MySignalMeta):
+
+        click = Signal()
+
+        @handler('click')
+        def handler1(self, *args, **kwargs):
+            c['handler_called'] = True
+
+
+    a = A()
+
+    a.click.notify_prepared(notify_external=False)
+
+    assert c.get('publish_called') is False
+    assert c.get('handler_called') is True
+
+    c['handler_called'] = False
+
+    a.click.notify_prepared(notify_external=True)
+
+    assert c.get('publish_called') is True
+    assert c.get('handler_called') is True
