@@ -18,7 +18,7 @@ def log_noisy_error(logger, *args, **kwargs):
 
 from .external import ExternalSignaller, ExternalSignallerAndHandler
 from .user import SignalNameHandlerDecorator, handler, SignalAndHandlerInitMeta
-from .atom import Signal
+from .core import Signal
 from .utils import (Executor, HANDLERS_SORT_MODE, MultipleResults, NoResult,
                     SignalError)
 

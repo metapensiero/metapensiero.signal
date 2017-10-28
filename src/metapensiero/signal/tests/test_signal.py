@@ -10,7 +10,7 @@ import asyncio
 import pytest
 
 from metapensiero.signal import handler, Signal, SignalAndHandlerInitMeta
-from metapensiero.signal.atom import InstanceProxy
+from metapensiero.signal.core import InstanceProxy
 
 
 def test_01_signal_with_functions(events):
