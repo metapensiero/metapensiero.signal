@@ -13,7 +13,7 @@
 .. toctree::
 
    intro
-   atom
+   core
    external
    user
    weak

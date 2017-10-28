@@ -8,12 +8,12 @@
 ..
 
 ======
- Atom
+ Core
 ======
 
 Contains the core class, `~Signal` and the main utility classes.
 
-.. autoclass:: metapensiero.signal.atom.Signal
+.. autoclass:: metapensiero.signal.core.Signal
 
   :param fnotify: a *callable* that will be executed to alter the notification
                   process. It is called with the following arguments:
@@ -93,6 +93,4 @@ Contains the core class, `~Signal` and the main utility classes.
   :param \*\*additional_params: optional additional params that will be stored
                                 in the instance
 
-.. autoclass:: metapensiero.signal.atom.InstanceProxy
-
-.. autoclass:: metapensiero.signal.atom.Notifier
+.. autoclass:: metapensiero.signal.core.InstanceProxy
