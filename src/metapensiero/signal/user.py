@@ -169,7 +169,10 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
                     aname = avalue.name
                 else:
                     avalue.name = aname
-                assert aname not in signals
+                assert ((aname not in signals) or
+                        (aname in signals and avalue is not signals[aname])), \
+                        ("The same signal {name!r} was found "
+                         "two times".format(name=aname))
                 if signaller:
                     avalue.external_signaller = signaller
                 signals[aname] = avalue
