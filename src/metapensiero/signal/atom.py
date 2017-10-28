@@ -134,8 +134,9 @@ class Signal(object):
 
     def _notify_one(self, instance, cback, *args, **kwargs):
         loop = self._loop_from_instance(instance)
-        return self.prepare_notification(subscribers=(cback,), instance=instance,
-                                         loop=loop).run(*args, **kwargs)
+        return self.prepare_notification(
+            subscribers=(cback,), instance=instance,
+            loop=loop).run(*args, **kwargs)
 
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
@@ -245,7 +246,8 @@ class Signal(object):
                              loop=None, notify_external=True):
         """Sets up a and configures an `Executor` instance."""
         # merge callbacks added to the class level with those added to the
-        # instance, giving the formers precedence while preserving overall order
+        # instance, giving the formers precedence while preserving overall
+        # order
         self_subscribers = self.subscribers.copy()
         # add in callbacks declared in the main class body and marked with
         # @handler

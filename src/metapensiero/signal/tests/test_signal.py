@@ -251,7 +251,6 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert a1.called == (1, 'a')
     # another subclass reimplents an handler
 
-
     class C(B):
 
         @handler('click')
@@ -443,7 +442,8 @@ def test_11_notify_wrapper(events):
 
 def test_12_connect_wrapper(events):
 
-    c = dict(called=0, connect_handler=None, handler_called=0, handler_args=None)
+    c = dict(called=0, connect_handler=None, handler_called=0,
+             handler_args=None)
 
     asignal = Signal()
 
@@ -469,8 +469,8 @@ def test_12_connect_wrapper(events):
     assert c['handler_called'] == 1
     assert c['handler_args'] == (('bar',), {'k': 1})
 
-    c = dict(called=0, connect_handler=None, handler_called=0, handler_args=None,
-             handler2_called=0, handler2_args=None)
+    c = dict(called=0, connect_handler=None, handler_called=0,
+             handler_args=None, handler2_called=0, handler2_args=None)
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
@@ -563,6 +563,7 @@ def test_13_disconnect_wrapper():
     # class-level handlers are excluded
     assert len(a.click.subscribers) == 0
 
+
 def test_14_nonexistent_signal():
 
     from metapensiero.signal import SignalError
@@ -577,6 +578,7 @@ def test_14_nonexistent_signal():
             @handler('dblclick')
             def handler(self, *args, **kwargs):
                 pass
+
 
 def test_15_external_signaller_filters_handlers():
 
@@ -618,7 +620,8 @@ def test_15_external_signaller_filters_handlers():
             pass
 
     assert A._ext_handlers == {'handler2': 'myext.dbclick'}
-    assert A._signal_handlers == {'handler1': 'click', 'handler2': 'myext.dbclick'}
+    assert A._signal_handlers == {'handler1': 'click',
+                                  'handler2': 'myext.dbclick'}
     assert A._signals == {'click': A.click, 'myext.dbclick': None}
 
 

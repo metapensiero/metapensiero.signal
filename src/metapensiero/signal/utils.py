@@ -109,8 +109,8 @@ class MultipleResults(Awaitable):
     concurrently or sequentially.
 
     :param iterable: the incoming iterable containing the results
-    :keyword concurrent: a flag indicating if the evaluation of the *awaitables*
-      has to be done concurrently or sequentially
+    :keyword concurrent: a flag indicating if the evaluation of the
+      *awaitables* has to be done concurrently or sequentially
     :keyword owner: the optional creator instance
     """
 
