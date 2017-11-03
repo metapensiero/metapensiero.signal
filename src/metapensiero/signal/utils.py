@@ -67,7 +67,10 @@ class Executor:
             else:
                 res = handler(*args, **kwargs)
             if isinstance(res, MultipleResults):
-                results += res.results
+                if res.done:
+                    results += res.results
+                else:
+                    results += res._results
             elif res is not NoResult:
                 results.append(res)
         return MultipleResults(results, concurrent=self.concurrent, owner=self)
