@@ -26,6 +26,9 @@ class Executor:
       handlers have to be executed concurrently or sequentially (the default)
     :keyword loop: optional loop
     :keyword exec_wrapper: an optional callable to call as a wrapper
+    :keyword adapt_params: a flag indicating if the executor should try to
+      adapt available call parameters to those accepted by the endpoints.
+      ``True`` by default
     """
 
     def __init__(self, endpoints, *, owner=None, concurrent=False, loop=None,
@@ -51,6 +54,9 @@ class Executor:
         return bind
 
     def exec_all_endpoints(self, *args, **kwargs):
+        """Execute each passed endpoint and collect the results. If a result
+        is anoter `MultipleResults` it will extend the results with those
+        contained therein. If the result is `NoResult`, skip the addition."""
         results = []
         for handler in self.endpoints:
             if isinstance(handler, weakref.ref):
