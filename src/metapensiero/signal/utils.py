@@ -28,7 +28,7 @@ class Executor:
     :keyword exec_wrapper: an optional callable to call as a wrapper
     """
 
-    def __init__(self, owner, endpoints, *, concurrent=False, loop=None,
+    def __init__(self, endpoints, *, owner=None, concurrent=False, loop=None,
                  exec_wrapper=None, adapt_params=True):
         self.owner = owner
         self.endpoints = list(endpoints)

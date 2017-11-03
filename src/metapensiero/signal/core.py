@@ -294,7 +294,7 @@ class Signal(object):
                 fnotify = self._fnotify
             else:
                 fnotify = partial(self._fnotify, instance)
-        return Executor(self, self_subscribers,
+        return Executor(self_subscribers, owner=self,
                         concurrent=self._concurrent_handlers,
                         loop=loop, exec_wrapper=fnotify)
 
