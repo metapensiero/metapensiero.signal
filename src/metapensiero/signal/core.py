@@ -131,6 +131,11 @@ class Signal(object):
             result = self
         return result
 
+    def __repr__(self):
+        return ("<%s with name %r, len: %d>" % (
+            self.__class__.__name__, self.name, len(self.subscribers)
+        ))
+
     def _connect(self, subscribers, cback):
         if cback not in subscribers:
             subscribers.append(cback)
