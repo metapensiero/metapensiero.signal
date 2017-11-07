@@ -90,12 +90,12 @@ class Executor:
                 # if a exec wrapper is defined, defer notification to it,
                 # a callback to execute the default notification process
                 result = self.exec_wrapper(self.endpoints,
-                                             self.exec_all_endpoints,
-                                             *args, **kwargs)
+                                           self.exec_all_endpoints,
+                                           *args, **kwargs)
                 if inspect.isawaitable(result):
                     result = pull_result(result)
                 return result
-        except:
+        except Exception as e:
             if __debug__:
                 logger.exception('Error while executing')
             else:
