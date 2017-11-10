@@ -657,12 +657,13 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(sort_mode=Signal.SORT_MODE.BOTTOMUP)
+        click = Signal(flags=Signal.FLAGS.SORT_BOTTOMUP)
 
         @handler('click')
         def z(self):
             called.append('z')
 
+    assert A.click._fnotify is None
 
     class B(A):
 
@@ -683,7 +684,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(sort_mode=Signal.SORT_MODE.TOPDOWN)
+        click = Signal(flags=Signal.FLAGS.SORT_TOPDOWN)
 
         @handler('click')
         def z(self):
@@ -710,7 +711,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(sort_mode=Signal.SORT_MODE.BOTTOMUP)
+        click = Signal(flags=Signal.FLAGS.SORT_BOTTOMUP)
 
         @handler('click')
         def z(self):
@@ -741,7 +742,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(sort_mode=Signal.SORT_MODE.BOTTOMUP)
+        click = Signal(flags=Signal.FLAGS.SORT_BOTTOMUP)
 
         @handler('click')
         def z(self):
@@ -773,7 +774,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(sort_mode=Signal.SORT_MODE.TOPDOWN)
+        click = Signal(flags=Signal.FLAGS.SORT_TOPDOWN)
 
         @handler('click')
         def z(self):
@@ -804,7 +805,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(sort_mode=Signal.SORT_MODE.TOPDOWN)
+        click = Signal(flags=Signal.FLAGS.SORT_TOPDOWN)
 
         @handler('click')
         def z(self):

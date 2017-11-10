@@ -13,7 +13,7 @@ import inspect
 import weakref
 
 from .external import ExternalSignaller
-from .utils import Executor, HANDLERS_SORT_MODE, pull_result
+from .utils import Executor, pull_result, SignalOptions
 from .weak import MethodAwareWeakList
 from . import SignalAndHandlerInitMeta
 
@@ -100,13 +100,12 @@ class Signal(object):
     _name = None
     _concurrent_handlers = False
 
-    SORT_MODE = HANDLERS_SORT_MODE
-    """All the available handlers sort modes. See `~.utils.HANDLERS_SORT_MODE`.
+    FLAGS = SignalOptions
+    """All the available handlers sort modes. See `~.SignalOptions`.
     """
 
-    def __init__(self, fnotify=None, fconnect=None, fdisconnect=None,
-                 name=None, loop=None, external=None,
-                 concurrent_handlers=False, sort_mode=None,
+    def __init__(self, fnotify=None, flags=None, *, fconnect=None,
+                 fdisconnect=None, name=None, loop=None, external=None,
                  **additional_params):
         self.name = name
         self.subscribers = MethodAwareWeakList()
@@ -117,8 +116,15 @@ class Signal(object):
         self._fconnect = fconnect
         self._fdisconnect = fdisconnect
         self._iproxies = weakref.WeakKeyDictionary()
-        self._concurrent_handlers = concurrent_handlers
-        self._sort_mode = sort_mode or HANDLERS_SORT_MODE.BOTTOMUP
+        if flags is None:
+            flags = SignalOptions.SORT_BOTTOMUP
+        elif (SignalOptions.SORT_BOTTOMUP in flags and
+            SignalOptions.SORT_TOPDOWN in flags):
+            raise ValueError("Both sort modes specified in the flags")
+        elif not (SignalOptions.SORT_BOTTOMUP in flags and
+                  SignalOptions.SORT_TOPDOWN in flags):
+            flags = flags | SignalOptions.SORT_BOTTOMUP
+        self.flags = flags
         self.additional_params = additional_params
         """additional parameter passed at construction time"""
 
@@ -300,7 +306,7 @@ class Signal(object):
             else:
                 fnotify = partial(self._fnotify, instance)
         return Executor(self_subscribers, owner=self,
-                        concurrent=self._concurrent_handlers,
+                        concurrent=SignalOptions.EXEC_CONCURRENT in self.flags,
                         loop=loop, exec_wrapper=fnotify)
 
     def on_connect(self, fconnect):

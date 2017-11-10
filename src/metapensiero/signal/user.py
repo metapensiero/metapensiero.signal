@@ -12,7 +12,7 @@ from functools import partial
 from weakref import WeakSet
 
 from .external import ExternalSignallerAndHandler
-from .utils import HANDLERS_SORT_MODE, SignalError
+from .utils import SignalError, SignalOptions
 
 
 SPEC_CONTAINER_MEMBER_NAME = '_publish'
@@ -198,11 +198,12 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
         lower level. ``config`` can contain two keys ``begin`` or ``end`` that
         will further reposition the handler at the two extremes.
         """
-        def macro_precedence_sorter(direction, hname):
+        def macro_precedence_sorter(flags, hname):
             """The default is to sort 'bottom_up', with lower level getting
             executed first, but sometimes you need them reversed."""
             data = configs[hname]
-            topdown_sort = direction == HANDLERS_SORT_MODE.TOPDOWN
+            topdown_sort = (False if flags is None else
+                            SignalOptions.SORT_TOPDOWN in flags)
             if topdown_sort:
                 level = levels_count - 1 - data['level']
             else:
@@ -224,9 +225,9 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
                     sig_handlers.append(hname)
         for sig_name, sig_handlers in per_signal.items():
             if sig_name in signals:  # it may be on a mixin
-                sort_mode = signals[sig_name]._sort_mode
+                flags = signals[sig_name].flags
                 sig_handlers.sort(key=partial(macro_precedence_sorter,
-                                              sort_mode))
+                                              flags))
         return per_signal
 
     def instance_signals_and_handlers(cls, instance):

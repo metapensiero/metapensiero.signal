@@ -8,7 +8,7 @@
 
 from collections.abc import Awaitable
 import asyncio
-import enum
+from enum import Flag, auto
 import inspect
 import logging
 import weakref
@@ -200,18 +200,18 @@ class SignalError(Exception):
     """Generic error raised during signal operations"""
 
 
-class HANDLERS_SORT_MODE(enum.Enum):
-    """Stores the types of sort order available when retrieving class-based
-    handlers. This is meaningful when using `~.atom.Signal` in together with
-    classes that use `~.user.SignalAndHandlerInitMeta` as their
-    ``metaclass``.
+class SignalOptions(Flag):
+    """The flags that change how the signal operates.
     """
 
-    BOTTOMUP = 1
-    """The class level handlers are sort from the "oldest" to the
+    SORT_BOTTOMUP = auto()
+    """The class level handlers are sorted from the "oldest" to the
     "newest". Handlers defined in the ancestor classes will be executed before
     of those on child classes."""
-    TOPDOWN = 2
-    """The class level handlers are sort from the "newest" to the
+    SORT_TOPDOWN = auto()
+    """The class level handlers are sorted from the "newest" to the
     "oldest". Handlers defined in the child classes will be executed before
     of those on ancestor classes."""
+    EXEC_CONCURRENT = auto()
+    """Execute the subscribers concurrently by using an ``asyncio.gather()``
+    call."""
