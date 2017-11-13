@@ -13,7 +13,8 @@ from metapensiero.signal import handler, Signal, SignalAndHandlerInitMeta
 from metapensiero.signal.core import InstanceProxy
 
 
-def test_01_signal_with_functions(events):
+@pytest.mark.asyncio
+async def test_01_signal_with_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
 
@@ -29,13 +30,13 @@ def test_01_signal_with_functions(events):
 
     assert len(signal.subscribers) == 2
 
-    res = signal.notify(1, kw='a')
-    events.loop.run_until_complete(res)
+    await signal.notify(1, kw='a')
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
 
 
-def test_02_signal_with_async_functions(events):
+@pytest.mark.asyncio
+async def test_02_signal_with_async_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
     events.define('h1', 'h2')
@@ -53,15 +54,15 @@ def test_02_signal_with_async_functions(events):
 
     assert len(signal.subscribers) == 2
 
-    res = signal.notify(1, kw='a')
+    await signal.notify(1, kw='a')
+    await events.wait()
 
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.wait())
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
 
 
-def test_03_signal_with_mixed_functions(events):
+@pytest.mark.asyncio
+async def test_03_signal_with_mixed_functions(events):
     signal = Signal()
     c = dict(called1=False, called2=False)
     events.define('h1')
@@ -78,14 +79,14 @@ def test_03_signal_with_mixed_functions(events):
 
     assert len(signal.subscribers) == 2
 
-    res = signal.notify(1, kw='a')
-    events.loop.run_until_complete(res)
+    await signal.notify(1, kw='a')
     assert c['called2'] == (1, 'a')
-    events.loop.run_until_complete(events.wait())
+    await events.wait()
     assert c['called1'] == (1, 'a')
 
 
-def test_04_signal_with_methods(events):
+@pytest.mark.asyncio
+async def test_04_signal_with_methods(events):
     signal = Signal()
 
     class A(object):
@@ -106,15 +107,15 @@ def test_04_signal_with_methods(events):
 
     assert len(signal.subscribers) == 2
 
-    res = signal.notify(1, kw='a')
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.wait())
+    await signal.notify(1, kw='a')
+    await events.wait()
 
     assert a1.called == (1, 'a')
     assert a2.called == (1, 'a')
 
 
-def test_05_class_defined_signal(events):
+@pytest.mark.asyncio
+async def test_05_class_defined_signal(events):
     class A(object):
 
         # the name here is needed for classes that don't explicitly support
@@ -149,18 +150,16 @@ def test_05_class_defined_signal(events):
     assert len(a1.click.subscribers) == 2
     assert len(a2.click.subscribers) == 1
 
-    res = a1.click.notify(1, kw='a')
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.wait(events.a2))
+    await a1.click.notify(1, kw='a')
+    await events.wait(events.a2)
 
     assert a1.called == (1, 'a')
 
     assert c['called1'] == (1, 'a')
     assert a2.called is False
 
-    res = a2.click.notify(2, kw='b')
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.wait())
+    await a2.click.notify(2, kw='b')
+    await events.wait()
 
     assert a1.called == (1, 'a')
     assert c['called1'] == (1, 'a')
@@ -175,7 +174,8 @@ def test_06_signal_init_mclass():
     assert A.click.name == 'click'
 
 
-def test_07_class_defined_signal_with_decorator_named(events):
+@pytest.mark.asyncio
+async def test_07_class_defined_signal_with_decorator_named(events):
     class A(metaclass=SignalAndHandlerInitMeta):
 
         click = Signal()
@@ -198,11 +198,9 @@ def test_07_class_defined_signal_with_decorator_named(events):
 
     assert len(a1.click.subscribers) == 0
 
-    res = a1.click.notify(1, kw='a')
+    res = await a1.click.notify(1, kw='a')
 
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.a_a1.wait())
-    res = res.results
+    await events.a_a1.wait()
 
     assert len(res) == 1
     assert a1.called == (1, 'a')
@@ -227,22 +225,18 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert b1.called is False
     assert b1.calledb is False
 
-    res = a1.click.notify(1, kw='a')
     events.a_a1.clear()
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.a_a1.wait())
-    res = res.results
+    res = await a1.click.notify(1, kw='a')
+    await events.a_a1.wait()
 
     assert len(res) == 1
 
     assert b1.called is False
     assert b1.calledb is False
 
-    res = b1.click.notify(2, kw='b')
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.a_b1.wait())
-    events.loop.run_until_complete(events.b_b1.wait())
-    res = res.results
+    res = await b1.click.notify(2, kw='b')
+    await events.a_b1.wait()
+    await events.b_b1.wait()
 
     # assert len(res) == 2
 
@@ -264,11 +258,9 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert c1.called is False
     assert c1.calledb is False
 
-    res = c1.click.notify(3, kw='c')
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.a_c1.wait())
-    events.loop.run_until_complete(events.b_c1.wait())
-    res = res.results
+    res = await c1.click.notify(3, kw='c')
+    await events.a_c1.wait()
+    await events.b_c1.wait()
 
     assert c1.called == (3, 'c')
     assert c1.calledb == (3, 'c')
@@ -278,7 +270,8 @@ def test_07_class_defined_signal_with_decorator_named(events):
     assert a1.called == (1, 'a')
 
 
-def test_08_class_defined_signal_with_decorator_mixed(events):
+@pytest.mark.asyncio
+async def test_08_class_defined_signal_with_decorator_mixed(events):
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
@@ -305,12 +298,12 @@ def test_08_class_defined_signal_with_decorator_mixed(events):
     assert a1.called == (1, 'a')
     assert a1.called2 is False
 
-    events.loop.run_until_complete(res)
-
+    await res
     assert a1.called2 == (1, 'a')
 
 
-def test_09_external_signaller(events):
+@pytest.mark.asyncio
+async def test_09_external_signaller(events):
 
     import asyncio
     from metapensiero.signal import ExternalSignaller
@@ -336,15 +329,15 @@ def test_09_external_signaller(events):
     assert c['register_called'] == (signal, 'foo')
     assert c['publish_called'] is False
 
-    res = signal.notify('foo', zoo='bar')
-    events.loop.run_until_complete(res)
+    await signal.notify('foo', zoo='bar')
 
     assert c['publish_called'] == (signal, None, asyncio.get_event_loop(),
                                    ('foo',), {'zoo': 'bar'})
     assert c['register_called'] == (signal, 'foo')
 
 
-def test_10_external_signaller_async(events):
+@pytest.mark.asyncio
+async def test_10_external_signaller_async(events):
 
     from metapensiero.signal import ExternalSignaller
 
@@ -370,9 +363,8 @@ def test_10_external_signaller_async(events):
     assert c['register_called'] == (signal, 'foo')
     assert c['publish_called'] is False
 
-    res = signal.notify('foo', zoo='bar')
-    events.loop.run_until_complete(res)
-    events.loop.run_until_complete(events.publish.wait())
+    await signal.notify('foo', zoo='bar')
+    await events.publish.wait()
 
     assert c['publish_called'] == (signal, None, asyncio.get_event_loop(),
                                    ('foo',), {'zoo': 'bar'})
@@ -440,7 +432,8 @@ def test_11_notify_wrapper(events):
     assert c['handler2_args'] == (('foo',), {'k': 2})
 
 
-def test_12_connect_wrapper(events):
+@pytest.mark.asyncio
+async def test_12_connect_wrapper(events):
 
     c = dict(called=0, connect_handler=None, handler_called=0,
              handler_args=None)
@@ -460,8 +453,7 @@ def test_12_connect_wrapper(events):
         c['handler_args'] = (args, kwargs)
 
     res = asignal.connect(handler)
-    res2 = asignal.notify('bar', k=1)
-    events.loop.run_until_complete(res2)
+    res2 = await asignal.notify('bar', k=1)
 
     assert res == 'foo'
     assert c['called'] == 1
@@ -496,8 +488,7 @@ def test_12_connect_wrapper(events):
         c['handler2_args'] = (args, kwargs)
 
     res = a.click.connect(handler2)
-    res2 = a.click.notify('bar', k=1)
-    events.loop.run_until_complete(res2)
+    res2 = await a.click.notify('bar', k=1)
 
     assert res == 'foo'
     assert c['called'] == 1
@@ -625,7 +616,8 @@ def test_15_external_signaller_filters_handlers():
     assert A._signals == {'click': A.click, 'myext.dbclick': None}
 
 
-def test_16_dot_handlers(events):
+@pytest.mark.asyncio
+async def test_16_dot_handlers(events):
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
@@ -643,11 +635,9 @@ def test_16_dot_handlers(events):
 
     assert a1.called is False
 
-    res = a1.me.notify(1, kw='a')
+    await a1.me.notify(1, kw='a')
 
     assert a1.called == (1, 'a')
-
-    events.loop.run_until_complete(res)
 
 
 @pytest.mark.asyncio

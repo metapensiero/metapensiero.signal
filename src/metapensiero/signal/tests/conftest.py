@@ -47,12 +47,7 @@ class EventFactory:
 
     TimeoutError = asyncio.TimeoutError
 
-@pytest.fixture(scope='session')
-def loop():
-    l = asyncio.new_event_loop()
-    asyncio.set_event_loop(l)
-    return l
 
 @pytest.fixture(scope='function')
-def events(loop):
-    return EventFactory(loop)
+def events(event_loop):
+    return EventFactory(event_loop)
