@@ -11,6 +11,7 @@ import pytest
 
 from metapensiero.signal import handler, Signal, SignalAndHandlerInitMeta
 from metapensiero.signal.core import InstanceProxy
+from metapensiero.signal.utils import MultipleResults, ExecutionError
 
 
 @pytest.mark.asyncio
@@ -868,3 +869,43 @@ def test_18_notify_prepared_dont_signal_external():
 
     assert c.get('publish_called') is True
     assert c.get('handler_called') is True
+
+
+def test_19_validation():
+
+    c = dict(handler_called=False, validator_called=False)
+
+
+    class Context:
+        """Just a fake context"""
+
+    @Signal
+    def click(context, event=None):
+        """This is a click signal"""
+        c['validator_called'] = True
+        return isinstance(context, Context)
+
+    def handler(context, event=None):
+        c['handler_called'] = True
+
+    assert "This is a click signal" in click.__doc__
+    assert "This is a click signal" != click.__doc__
+
+    click.connect(handler)
+
+    res = click(Context())
+
+    assert isinstance(res, MultipleResults)
+    assert res.done is True
+    assert c['validator_called'] is True
+    assert c['handler_called'] is True
+
+    c = dict(handler_called=False, validator_called=False)
+
+    with pytest.raises(ExecutionError) as exc_info:
+        click('pollo')
+
+    assert c['validator_called'] is True
+    assert c['handler_called'] is False
+
+    assert exc_info.match('validation.*failed')

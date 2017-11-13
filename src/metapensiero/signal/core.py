@@ -10,6 +10,7 @@ import asyncio
 from functools import partial
 import logging
 import inspect
+import sys
 import weakref
 
 from .external import ExternalSignaller
@@ -19,6 +20,13 @@ from . import SignalAndHandlerInitMeta
 
 
 logger = logging.getLogger(__name__)
+SIGN_DOC_TEMPLATE="""{}
+
+:returns: an awaitable that will return the results from the handlers
+:rtype: an instance of `~metapensiero.signal.utils.MultipleResults`:py:class:
+
+This is a `~metapensiero.signal.core.Signal`:py:class:
+"""
 
 
 class InstanceProxy:
@@ -30,6 +38,9 @@ class InstanceProxy:
         self.signal = signal
         self.instance = instance
         self.subscribers = self.get_subscribers()
+        sdoc = signal.__dict__.get('__doc__')
+        if sdoc is not None:
+            self.__doc__ = sdoc
 
     def __repr__(self):
         return ('<Signal "{self.signal.name}" '
@@ -104,9 +115,9 @@ class Signal(object):
     """All the available handlers sort modes. See `~.SignalOptions`.
     """
 
-    def __init__(self, fnotify=None, flags=None, *, fconnect=None,
-                 fdisconnect=None, name=None, loop=None, external=None,
-                 **additional_params):
+    def __init__(self, fvalidation=None, flags=None, *, fconnect=None,
+                 fdisconnect=None, fnotify=None, name=None, loop=None,
+                 external=None, **additional_params):
         self.name = name
         self.subscribers = MethodAwareWeakList()
         self.loop = loop or asyncio.get_event_loop()
@@ -115,6 +126,11 @@ class Signal(object):
         self._fnotify = fnotify
         self._fconnect = fconnect
         self._fdisconnect = fdisconnect
+        self._fvalidation = fvalidation
+        if fvalidation is not None:
+            fvalidation.__doc__ = SIGN_DOC_TEMPLATE.format(
+                fvalidation.__doc__ or '')
+            self.__doc__ = fvalidation.__doc__
         self._iproxies = weakref.WeakKeyDictionary()
         if flags is None:
             flags = SignalOptions.SORT_BOTTOMUP
@@ -128,13 +144,18 @@ class Signal(object):
         self.additional_params = additional_params
         """additional parameter passed at construction time"""
 
-    def __get__(self, instance, cls=None):
-        if instance is not None:
+    def __get__(self, instance, owner):
+        if instance is None:
+            # just a silly trick to get some better autodoc docs
+            if (self._fvalidation is not None and
+                'sphinx.ext.autodoc' in sys.modules):
+                result = self._fvalidation
+            else:
+                result = self
+        else:
             if instance not in self._iproxies:
                 self._iproxies[instance] = InstanceProxy(self, instance)
             result = self._iproxies[instance]
-        else:
-            result = self
         return result
 
     def __repr__(self):
@@ -307,7 +328,8 @@ class Signal(object):
                 fnotify = partial(self._fnotify, instance)
         return Executor(self_subscribers, owner=self,
                         concurrent=SignalOptions.EXEC_CONCURRENT in self.flags,
-                        loop=loop, exec_wrapper=fnotify)
+                        loop=loop, exec_wrapper=fnotify,
+                        fvalidation=self._fvalidation)
 
     def on_connect(self, fconnect):
         "On connect optional wrapper decorator"
@@ -317,4 +339,9 @@ class Signal(object):
     def on_disconnect(self, fdisconnect):
         "On disconnect optional wrapper decorator"
         self._fdisconnect = fdisconnect
+        return self
+
+    def on_notify(self, fnotify):
+        "On notify optional wrapper decorator"
+        self._fnotify = fnotify
         return self
