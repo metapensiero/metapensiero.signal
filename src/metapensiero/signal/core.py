@@ -81,6 +81,8 @@ class InstanceProxy:
             subscribers=self.subscribers, instance=self.instance,
             loop=loop).run(*args, **kwargs)
 
+    __call__ = notify
+
     def notify_prepared(self, args=None, kwargs=None, **opts):
         """Like notify allows to pass more options to the underlying
         `Signal.prepare_notification()` method.
@@ -287,6 +289,8 @@ class Signal(object):
           the execution of the corresponding wrapper function
         """
         return self.prepare_notification().run(*args, **kwargs)
+
+    __call__ = notify
 
     def prepare_notification(self, *, subscribers=None, instance=None,
                              loop=None, notify_external=True):
