@@ -376,7 +376,9 @@ def test_11_notify_wrapper(events):
 
     c = dict(called=0, wrap_args=None, handler_called=0, handler_args=None)
 
-    @Signal
+    asignal = Signal()
+
+    @asignal.on_notify
     def asignal(subscribers, notify, *args, **kwargs):
         c['called'] += 1
         c['wrap_args'] = (args, kwargs)
@@ -402,7 +404,9 @@ def test_11_notify_wrapper(events):
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        @Signal
+        click = Signal()
+
+        @click.on_notify
         def click(self, subscribers, notify, *args, **kwargs):
             c['called'] += 1
             c['wrap_args'] = (args, kwargs)
@@ -563,7 +567,9 @@ def test_14_nonexistent_signal():
     with pytest.raises(SignalError):
         class A(metaclass=SignalAndHandlerInitMeta):
 
-            @Signal
+            click = Signal()
+
+            @click.on_notify
             def click(self, subscribers, notify, *args, **kwargs):
                 notify('foo', k=2)
 
