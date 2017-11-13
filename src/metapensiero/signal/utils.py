@@ -29,19 +29,33 @@ class Executor:
     :keyword adapt_params: a flag indicating if the executor should try to
       adapt available call parameters to those accepted by the endpoints.
       ``True`` by default
+    :keyword fvalidation: an optional callable that will be used to validate
+      the arguments passed to `~.run()`. If the args aren't compatible with
+      the signature of such callable or if the callable returns ``False``
+      execution will be aborted by raising an `~.ExecutionError`
     """
 
     def __init__(self, endpoints, *, owner=None, concurrent=False, loop=None,
-                 exec_wrapper=None, adapt_params=True):
+                 exec_wrapper=None, adapt_params=True, fvalidation=None):
         self.owner = owner
         self.endpoints = list(endpoints)
         self.concurrent = concurrent
         self.loop = loop
         self.exec_wrapper = exec_wrapper
         self.adapt_params = adapt_params
+        if fvalidation is None:
+            self.fvalidation = None
+        else:
+            if callable(fvalidation):
+                self.fvalidation = fvalidation
+            else:
+                raise ExecutionError("Wrong value for ``fvalidation``")
 
     def _adapt_call_params(self, func, args, kwargs):
         signature = inspect.signature(func, follow_wrapped=False)
+        if (not inspect.ismethod(func) and
+            getattr(func, '__signature__', None) is None):
+            setattr(func, '__signature__', signature)
         has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD
                         for n, p in signature.parameters.items())
         if has_varkw:
@@ -83,6 +97,18 @@ class Executor:
 
         :returns: an instance of `~.utils.MultipleResults`
         """
+        if self.fvalidation is not None:
+            try:
+                if self.fvalidation(*args, **kwargs) is False:
+                    raise ExecutionError("Validation returned ``False``")
+            except Exception as e:
+                if __debug__:
+                    logger.exception("Validation failed")
+                else:
+                    logger.error("Validation failed")
+                raise ExecutionError(
+                    "The validation of the arguments specified to ``run()`` "
+                    "has failed") from e
         try:
             if self.exec_wrapper is None:
                 return self.exec_all_endpoints(*args, **kwargs)
@@ -97,10 +123,10 @@ class Executor:
                 return result
         except Exception as e:
             if __debug__:
-                logger.exception('Error while executing')
+                logger.exception("Error while executing handlers")
             else:
-                logger.error('Error while executing')
-            raise
+                logger.error("Error while executing handlers")
+            raise ExecutionError("Error while executing handlers") from e
 
     __call__ = run
 
@@ -197,8 +223,10 @@ async def pull_result(result):
 
 
 class SignalError(Exception):
-    """Generic error raised during signal operations"""
+    """Generic error raised during signal operations."""
 
+class ExecutionError(SignalError):
+    """Error raised during executor operations."""
 
 class SignalOptions(Flag):
     """The flags that change how the signal operates.
