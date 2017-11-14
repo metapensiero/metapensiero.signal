@@ -271,3 +271,4 @@ def signal(*args, **kwargs):
         def wrapper(fvalidation):
             sig._set_fvalidation(fvalidation)
             return sig
+        return wrapper
