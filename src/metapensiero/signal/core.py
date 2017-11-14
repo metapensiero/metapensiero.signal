@@ -118,9 +118,9 @@ class Signal(object):
     """All the available handlers sort modes. See `~.SignalOptions`.
     """
 
-    def __init__(self, fvalidation=None, flags=None, fconnect=None,
-                 fdisconnect=None, fnotify=None, name=None, loop=None,
-                 external=None, **additional_params):
+    def __init__(self, *flags, fconnect=None, fdisconnect=None,
+                 fnotify=None, fvalidation=None, name=None,
+                 loop=None, external=None, **additional_params):
         self.name = name
         self.subscribers = MethodAwareWeakList()
         self.loop = loop or asyncio.get_event_loop()
@@ -129,30 +129,15 @@ class Signal(object):
         self._fnotify = fnotify
         self._fconnect = fconnect
         self._fdisconnect = fdisconnect
-        self._fvalidation = fvalidation
-        if fvalidation is not None:
-            fvalidation.__doc__ = SIGN_DOC_TEMPLATE.format(
-                fvalidation.__doc__ or '')
-            self.__doc__ = fvalidation.__doc__
+        self._set_fvalidation(fvalidation)
         self._iproxies = weakref.WeakKeyDictionary()
-        if flags is None:
-            flags = (SignalOptions.SORT_BOTTOMUP,)
-        else:
-            if isinstance(flags, collections.abc.Iterable):
-                flags = tuple(flags)
-                if not all(isinstance(f, SignalOptions) for f in flags):
-                    raise ValueError("``flags`` elements must be instances of "
-                                     "`SignalOptions")
-            else:
-                if isinstance(flags, SignalOptions):
-                    flags = (flags,)
-                else:
-                    raise ValueError("``flags`` must be an iterable or "
-                                     "``None``")
+        if not all(isinstance(f, SignalOptions) for f in flags):
+            raise ValueError("``flags`` elements must be instances of "
+                             "`SignalOptions")
         if (SignalOptions.SORT_BOTTOMUP in flags and
             SignalOptions.SORT_TOPDOWN in flags):
             raise ValueError("Both sort modes specified in the flags")
-        elif not (SignalOptions.SORT_BOTTOMUP in flags and
+        elif not (SignalOptions.SORT_BOTTOMUP in flags or
                   SignalOptions.SORT_TOPDOWN in flags):
             flags = flags + (SignalOptions.SORT_BOTTOMUP,)
         self.flags = flags
@@ -198,6 +183,13 @@ class Signal(object):
         return self.prepare_notification(
             subscribers=(cback,), instance=instance,
             loop=loop).run(*args, **kwargs)
+
+    def _set_fvalidation(self, value):
+        self._fvalidation = value
+        if value is not None:
+            value.__doc__ = SIGN_DOC_TEMPLATE.format(
+                value.__doc__ or '')
+            self.__doc__ = value.__doc__
 
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.

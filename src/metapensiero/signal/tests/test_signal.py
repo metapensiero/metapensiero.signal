@@ -11,12 +11,12 @@ import pytest
 
 from metapensiero.signal import handler, Signal, SignalAndHandlerInitMeta
 from metapensiero.signal.core import InstanceProxy
-from metapensiero.signal.utils import MultipleResults, ExecutionError
+from metapensiero.signal.utils import MultipleResults, ExecutionError, signal
 
 
 @pytest.mark.asyncio
 async def test_01_signal_with_functions(events):
-    signal = Signal()
+    asignal = Signal()
     c = dict(called1=False, called2=False)
 
     def handler1(arg, kw):
@@ -26,19 +26,19 @@ async def test_01_signal_with_functions(events):
     def handler2(arg, kw):
         c['called2'] = (arg, kw)
 
-    signal.connect(handler1)
-    signal.connect(handler2)
+    asignal.connect(handler1)
+    asignal.connect(handler2)
 
-    assert len(signal.subscribers) == 2
+    assert len(asignal.subscribers) == 2
 
-    await signal.notify(1, kw='a')
+    await asignal.notify(1, kw='a')
     assert c['called1'] == (1, 'a')
     assert c['called2'] == (1, 'a')
 
 
 @pytest.mark.asyncio
 async def test_02_signal_with_async_functions(events):
-    signal = Signal()
+    asignal = Signal()
     c = dict(called1=False, called2=False)
     events.define('h1', 'h2')
 
@@ -50,12 +50,12 @@ async def test_02_signal_with_async_functions(events):
         c['called2'] = (arg, kw)
         events.h2.set()
 
-    signal.connect(handler1)
-    signal.connect(handler2)
+    asignal.connect(handler1)
+    asignal.connect(handler2)
 
-    assert len(signal.subscribers) == 2
+    assert len(asignal.subscribers) == 2
 
-    await signal.notify(1, kw='a')
+    await asignal.notify(1, kw='a')
     await events.wait()
 
     assert c['called1'] == (1, 'a')
@@ -64,7 +64,7 @@ async def test_02_signal_with_async_functions(events):
 
 @pytest.mark.asyncio
 async def test_03_signal_with_mixed_functions(events):
-    signal = Signal()
+    asignal = Signal()
     c = dict(called1=False, called2=False)
     events.define('h1')
 
@@ -75,12 +75,12 @@ async def test_03_signal_with_mixed_functions(events):
     def handler2(arg, kw):
         c['called2'] = (arg, kw)
 
-    signal.connect(handler1)
-    signal.connect(handler2)
+    asignal.connect(handler1)
+    asignal.connect(handler2)
 
-    assert len(signal.subscribers) == 2
+    assert len(asignal.subscribers) == 2
 
-    await signal.notify(1, kw='a')
+    await asignal.notify(1, kw='a')
     assert c['called2'] == (1, 'a')
     await events.wait()
     assert c['called1'] == (1, 'a')
@@ -88,7 +88,7 @@ async def test_03_signal_with_mixed_functions(events):
 
 @pytest.mark.asyncio
 async def test_04_signal_with_methods(events):
-    signal = Signal()
+    asignal = Signal()
 
     class A(object):
         def __init__(self, name):
@@ -103,12 +103,12 @@ async def test_04_signal_with_methods(events):
     a1 = A('a1')
     a2 = A('a2')
 
-    signal.connect(a1.handler)
-    signal.connect(a2.handler)
+    asignal.connect(a1.handler)
+    asignal.connect(a2.handler)
 
-    assert len(signal.subscribers) == 2
+    assert len(asignal.subscribers) == 2
 
-    await signal.notify(1, kw='a')
+    await asignal.notify(1, kw='a')
     await events.wait()
 
     assert a1.called == (1, 'a')
@@ -325,16 +325,16 @@ async def test_09_external_signaller(events):
     assert c['publish_called'] is False
 
     signaller = MyExternalSignaller()
-    signal = Signal(name='foo', external=signaller)
+    asignal = Signal(name='foo', external=signaller)
 
-    assert c['register_called'] == (signal, 'foo')
+    assert c['register_called'] == (asignal, 'foo')
     assert c['publish_called'] is False
 
-    await signal.notify('foo', zoo='bar')
+    await asignal.notify('foo', zoo='bar')
 
-    assert c['publish_called'] == (signal, None, asyncio.get_event_loop(),
+    assert c['publish_called'] == (asignal, None, asyncio.get_event_loop(),
                                    ('foo',), {'zoo': 'bar'})
-    assert c['register_called'] == (signal, 'foo')
+    assert c['register_called'] == (asignal, 'foo')
 
 
 @pytest.mark.asyncio
@@ -359,17 +359,17 @@ async def test_10_external_signaller_async(events):
     assert c['publish_called'] is False
 
     signaller = MyExternalSignaller()
-    signal = Signal(name='foo', external=signaller)
+    asignal = Signal(name='foo', external=signaller)
 
-    assert c['register_called'] == (signal, 'foo')
+    assert c['register_called'] == (asignal, 'foo')
     assert c['publish_called'] is False
 
-    await signal.notify('foo', zoo='bar')
+    await asignal.notify('foo', zoo='bar')
     await events.publish.wait()
 
-    assert c['publish_called'] == (signal, None, asyncio.get_event_loop(),
+    assert c['publish_called'] == (asignal, None, asyncio.get_event_loop(),
                                    ('foo',), {'zoo': 'bar'})
-    assert c['register_called'] == (signal, 'foo')
+    assert c['register_called'] == (asignal, 'foo')
 
 
 def test_11_notify_wrapper(events):
@@ -654,7 +654,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(flags=Signal.FLAGS.SORT_BOTTOMUP)
+        click = Signal(Signal.FLAGS.SORT_BOTTOMUP)
 
         @handler('click')
         def z(self):
@@ -681,7 +681,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(flags=Signal.FLAGS.SORT_TOPDOWN)
+        click = Signal(Signal.FLAGS.SORT_TOPDOWN)
 
         @handler('click')
         def z(self):
@@ -708,7 +708,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(flags=Signal.FLAGS.SORT_BOTTOMUP)
+        click = Signal(Signal.FLAGS.SORT_BOTTOMUP)
 
         @handler('click')
         def z(self):
@@ -739,7 +739,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(flags=Signal.FLAGS.SORT_BOTTOMUP)
+        click = Signal(Signal.FLAGS.SORT_BOTTOMUP)
 
         @handler('click')
         def z(self):
@@ -771,7 +771,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(flags=Signal.FLAGS.SORT_TOPDOWN)
+        click = Signal(Signal.FLAGS.SORT_TOPDOWN)
 
         @handler('click')
         def z(self):
@@ -802,7 +802,7 @@ async def test_17_handlers_sorting():
 
     class A(metaclass=SignalAndHandlerInitMeta):
 
-        click = Signal(flags=Signal.FLAGS.SORT_TOPDOWN)
+        click = Signal(Signal.FLAGS.SORT_TOPDOWN)
 
         @handler('click')
         def z(self):
@@ -885,7 +885,7 @@ def test_19_validation():
     class Context:
         """Just a fake context"""
 
-    @Signal
+    @signal
     def click(context, event=None):
         """This is a click signal"""
         c['validator_called'] = True
