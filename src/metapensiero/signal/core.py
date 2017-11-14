@@ -7,11 +7,13 @@
 #
 
 import asyncio
-import collections.abc
 from functools import partial
 import logging
 import inspect
 import sys
+import re
+import textwrap
+import types
 import weakref
 
 from .external import ExternalSignaller
@@ -21,7 +23,7 @@ from . import SignalAndHandlerInitMeta
 
 
 logger = logging.getLogger(__name__)
-SIGN_DOC_TEMPLATE="""{}
+SIGN_DOC_TEMPLATE="""
 
 :returns: an awaitable that will return the results from the handlers
 :rtype: an instance of `~metapensiero.signal.utils.MultipleResults`:py:class:
@@ -171,6 +173,14 @@ class Signal(object):
         if cback in subscribers:
             subscribers.remove(cback)
 
+    def _find_indent(self, doct):
+        lines = doct.splitlines()
+        for l in lines:
+            match = re.match('^[ ]+', l)
+            if match is not None:
+                return len(match[0])
+        return 0
+
     def _loop_from_instance(self, instance):
         if instance is None:
             loop = self.loop
@@ -187,9 +197,14 @@ class Signal(object):
     def _set_fvalidation(self, value):
         self._fvalidation = value
         if value is not None:
-            value.__doc__ = SIGN_DOC_TEMPLATE.format(
-                value.__doc__ or '')
-            self.__doc__ = value.__doc__
+            if value.__doc__ is  None:
+                doc = ''
+                indent = 0
+            else:
+                doc = value.__doc__
+                indent = self._find_indent(doc)
+            sig_doc = textwrap.indent(SIGN_DOC_TEMPLATE, ' ' * indent)
+            value.__doc__ = self.__doc__ = doc + sig_doc
 
     def connect(self, cback, subscribers=None, instance=None):
         """Add  a function or a method as an handler of this signal.
