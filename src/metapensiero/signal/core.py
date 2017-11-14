@@ -7,6 +7,7 @@
 #
 
 import asyncio
+import collections.abc
 from functools import partial
 import logging
 import inspect
@@ -117,7 +118,7 @@ class Signal(object):
     """All the available handlers sort modes. See `~.SignalOptions`.
     """
 
-    def __init__(self, fvalidation=None, flags=None, *, fconnect=None,
+    def __init__(self, fvalidation=None, flags=None, fconnect=None,
                  fdisconnect=None, fnotify=None, name=None, loop=None,
                  external=None, **additional_params):
         self.name = name
@@ -135,13 +136,25 @@ class Signal(object):
             self.__doc__ = fvalidation.__doc__
         self._iproxies = weakref.WeakKeyDictionary()
         if flags is None:
-            flags = SignalOptions.SORT_BOTTOMUP
-        elif (SignalOptions.SORT_BOTTOMUP in flags and
+            flags = (SignalOptions.SORT_BOTTOMUP,)
+        else:
+            if isinstance(flags, collections.abc.Iterable):
+                flags = tuple(flags)
+                if not all(isinstance(f, SignalOptions) for f in flags):
+                    raise ValueError("``flags`` elements must be instances of "
+                                     "`SignalOptions")
+            else:
+                if isinstance(flags, SignalOptions):
+                    flags = (flags,)
+                else:
+                    raise ValueError("``flags`` must be an iterable or "
+                                     "``None``")
+        if (SignalOptions.SORT_BOTTOMUP in flags and
             SignalOptions.SORT_TOPDOWN in flags):
             raise ValueError("Both sort modes specified in the flags")
         elif not (SignalOptions.SORT_BOTTOMUP in flags and
                   SignalOptions.SORT_TOPDOWN in flags):
-            flags = flags | SignalOptions.SORT_BOTTOMUP
+            flags = flags + (SignalOptions.SORT_BOTTOMUP,)
         self.flags = flags
         self.additional_params = additional_params
         """additional parameter passed at construction time"""

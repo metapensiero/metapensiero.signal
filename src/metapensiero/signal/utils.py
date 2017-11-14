@@ -8,7 +8,7 @@
 
 from collections.abc import Awaitable
 import asyncio
-from enum import Flag, auto
+from enum import Enum
 import inspect
 import logging
 import weakref
@@ -228,18 +228,18 @@ class SignalError(Exception):
 class ExecutionError(SignalError):
     """Error raised during executor operations."""
 
-class SignalOptions(Flag):
+class SignalOptions(Enum):
     """The flags that change how the signal operates.
     """
 
-    SORT_BOTTOMUP = auto()
+    SORT_BOTTOMUP = 1
     """The class level handlers are sorted from the "oldest" to the
     "newest". Handlers defined in the ancestor classes will be executed before
     of those on child classes."""
-    SORT_TOPDOWN = auto()
+    SORT_TOPDOWN = 2
     """The class level handlers are sorted from the "newest" to the
     "oldest". Handlers defined in the child classes will be executed before
     of those on ancestor classes."""
-    EXEC_CONCURRENT = auto()
+    EXEC_CONCURRENT = 3
     """Execute the subscribers concurrently by using an ``asyncio.gather()``
     call."""

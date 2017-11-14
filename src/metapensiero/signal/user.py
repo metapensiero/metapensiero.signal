@@ -202,8 +202,7 @@ class SignalAndHandlerInitMeta(InheritanceToolsMeta):
             """The default is to sort 'bottom_up', with lower level getting
             executed first, but sometimes you need them reversed."""
             data = configs[hname]
-            topdown_sort = (False if flags is None else
-                            SignalOptions.SORT_TOPDOWN in flags)
+            topdown_sort = SignalOptions.SORT_TOPDOWN in flags
             if topdown_sort:
                 level = levels_count - 1 - data['level']
             else:
