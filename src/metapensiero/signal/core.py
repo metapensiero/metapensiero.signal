@@ -349,11 +349,14 @@ class Signal(object):
             if instance is None:
                 fnotify = self._fnotify
             else:
-                fnotify = partial(self._fnotify, instance)
+                fnotify = types.MethodType(instance, self._fnotify)
+        validator = self._fvalidation
+        if validator is not None and instance is not None:
+            validator = types.MethodType(validator, instance)
         return Executor(self_subscribers, owner=self,
                         concurrent=SignalOptions.EXEC_CONCURRENT in self.flags,
                         loop=loop, exec_wrapper=fnotify,
-                        fvalidation=self._fvalidation)
+                        fvalidation=validator)
 
     def on_connect(self, fconnect):
         "On connect optional wrapper decorator"
