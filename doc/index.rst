@@ -6,9 +6,9 @@
 .. :Copyright: © 2016, 2017 Arstecnica s.r.l.
 ..
 
-==========================================
- An event framework that is asyncio aware
-==========================================
+==================================
+ An asyncio aware event framework
+==================================
 
 .. toctree::
 

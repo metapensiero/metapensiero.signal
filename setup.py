@@ -23,7 +23,7 @@ setup(
     version=VERSION,
     url="https://github.com/azazel75/metapensiero.signal",
 
-    description="A event framework that is asyncio aware",
+    description="An asyncio aware event framework",
     long_description=README + '\n\n' + CHANGES,
 
     author="Alberto Berti",
