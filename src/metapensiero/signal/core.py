@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 SIGN_DOC_TEMPLATE="""
 
 :returns: an awaitable that will return the results from the handlers
-:rtype: an instance of `~metapensiero.signal.utils.MultipleResults`:py:class:
+:rtype: an instance of `metapensiero.signal.utils.MultipleResults`:py:class:
 
-This is a `~metapensiero.signal.core.Signal`:py:class:
+This is a `metapensiero.signal.core.Signal`:py:class:
 """
 
 
@@ -108,16 +108,39 @@ class InstanceProxy:
             loop=loop, **opts).run(*args, **kwargs)
 
 
-class Signal(object):
-    """The core class. It collect subscriber *callables*, both normal and
-    *awaitables* to execute them when its `~Signal.notify()` method is called.
+class Signal:
+    """The core class. It collects subscribers that can be either normal
+    "callable" or coroutine/awaitable generator functions. The subscription is
+    managed using the `connect`:meth: and `disconnect`:meth: methods. The
+    notification is done by executing e `notify`:meth: method.
+
+    It can be used either as a standalone event or in the body of another class
+    which uses `~.user.SignalAndHandlerInitMeta`:class: metaclass, with the help
+    of the `~.utils.signal`:func: decorator.
+
+    :param \*flags: any flags that can change the behavior of the signal
+      instance, see `~.utils.SignalOptions`:class: class
+    :keyword fconnect: an optional callable that wraps the `connect`:meth:
+      method
+    :keyword fdisconnect: an optional callable that wraps the
+      `disconnect`:meth: method
+    :keyword fnotify: an optional callable that wraps the
+      `notify`:meth: method
+    :keyword fvalidation: an optional validation callable used to ensure that
+      arguments passed to the `notify`:meth: invocation are those permitted
+    :keyword str name: optional name of the signal
+    :keyword loop: optional asyncio event loop to use
+    :keyword external: optional external signaller that extends the signal
+    :type external: `~.external.ExternalSignaller`:class:
+    :param \*\*additional_params: optional additional params that will be
+      stored in the instance
     """
     _external_signaller = None
     _name = None
     _concurrent_handlers = False
 
     FLAGS = SignalOptions
-    """All the available handlers sort modes. See `~.SignalOptions`.
+    """All the available handlers sort modes. See `~.utils.SignalOptions`.
     """
 
     def __init__(self, *flags, fconnect=None, fdisconnect=None,
@@ -125,6 +148,7 @@ class Signal(object):
                  loop=None, external=None, **additional_params):
         self.name = name
         self.subscribers = MethodAwareWeakList()
+        """A weak list containing the connected handlers"""
         self.loop = loop or asyncio.get_event_loop()
         self.instance_subscribers = weakref.WeakKeyDictionary()
         self.external_signaller = external
@@ -279,7 +303,7 @@ class Signal(object):
 
     @property
     def external_signaller(self):
-        """The registered `~.external.ExternalSignaller`."""
+        """The registered `~.external.ExternalSignaller`:class:."""
         return self._external_signaller
 
     @external_signaller.setter
@@ -305,8 +329,8 @@ class Signal(object):
     def notify(self, *args, **kwargs):
         """Call all the registered handlers with the arguments passed.
 
-        :returns: an instance of `~.utils.MultipleResults` or the result of
-          the execution of the corresponding wrapper function
+        :returns: an instance of `~.utils.MultipleResults`:class: or the
+          result of the execution of the corresponding wrapper function
         """
         return self.prepare_notification().run(*args, **kwargs)
 
@@ -314,7 +338,7 @@ class Signal(object):
 
     def prepare_notification(self, *, subscribers=None, instance=None,
                              loop=None, notify_external=True):
-        """Sets up a and configures an `Executor` instance."""
+        """Sets up a and configures an `~.utils.Executor`:class: instance."""
         # merge callbacks added to the class level with those added to the
         # instance, giving the formers precedence while preserving overall
         # order
@@ -359,16 +383,29 @@ class Signal(object):
                         fvalidation=validator)
 
     def on_connect(self, fconnect):
-        "On connect optional wrapper decorator"
+        """On connect optional wrapper decorator.
+
+        :param fconnect: the callable to install as `connect`:meth: wrapper
+        :returns: the signal
+        """
         self._fconnect = fconnect
         return self
 
     def on_disconnect(self, fdisconnect):
-        "On disconnect optional wrapper decorator"
+        """On disconnect optional wrapper decorator.
+
+        :param fdisconnect: the callable to install as `disconnect`:meth:
+          wrapper
+        :returns: the signal
+        """
         self._fdisconnect = fdisconnect
         return self
 
     def on_notify(self, fnotify):
-        "On notify optional wrapper decorator"
+        """On notify optional wrapper decorator.
+
+        :param fnotify: the callable to install as `notify`:meth: wrapper
+        :returns: the signal
+        """
         self._fnotify = fnotify
         return self

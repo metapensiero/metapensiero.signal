@@ -1,17 +1,22 @@
 .. -*- coding: utf-8 -*-
-.. :Project:   metapensiero.signal -- An event framework that is asyncio aware
+.. :Project:   metapensiero.signal -- An asyncio aware event framework
 .. :Created:   dom 09 ago 2015 12:57:35 CEST
 .. :Author:    Alberto Berti <alberto@metapensiero.it>
 .. :License:   GNU General Public License version 3 or later
 .. :Copyright: Copyright © 2015, 2016, 2017 Alberto Berti
 ..
 
+.. currentmodule:: metapensiero.signal
+
 Introduction
 ============
 
 This package implements a light event system that is able to deal with
-both synchronous and asynchronous event handlers. It can be used as-is
-or as member of a class.
+both synchronous and asynchronous event handlers. It manages the asynchronous
+handlers using coroutines by default, with the possibility of handling them
+using futures.
+
+It can be used standalone or as member of a class.
 
 It supports Python 3.5+.
 
@@ -19,42 +24,93 @@ Basic functionality
 ~~~~~~~~~~~~~~~~~~~
 
 The most significant component provided by this package is the class
-``Signal``:
+`~core.Signal`:class: which is very simple to use. It has three main
+operations: *connect()*, *disconnect()* and  *notify()*.
 
-.. code:: python
+The first two are used to manage the subscriptions of handlers to the signal
+and the latter is used to actually execute all the handlers in the order that
+they had been connected, passing the arguments in the
+`~core.Signal.notify`:meth: call to each one, while collecting the result of
+the execution that will returned to the `~core.Signal.notify`:meth:'s
+caller. Let's see a simple example:
+
+.. testcode::
 
   from metapensiero.signal import Signal
 
-  signal = Signal()
-  called1 = False
-  called2 = False
+  asignal = Signal()
+  called = {
+   'handler1': False,
+   'handler2': False
+  }
 
   def handler1(arg, kw):
-      nonlocal called1
-      called1 = (arg, kw)
+      called['handler1'] = (arg, kw)
+      return 'result1'
 
   def handler2(arg, kw):
-      nonlocal called2
-      called2 = (arg, kw)
+      called['handler2'] = (arg, kw)
+      return 'result2'
 
-  signal.connect(handler1)
-  signal.connect(handler2)
+  asignal.connect(handler1)
+  asignal.connect(handler2)
 
-  signal.notify(1, kw='a')
-  assert called1 == (1, 'a')
-  assert called2 == (1, 'a')
+  result = asignal.notify(1, kw='a')
 
-As you can see, to have a function or method called when a signal is
-*fired* you just have to call the ``connect()`` method of the signal
-instance. To remove that same method you can use the ``disconnect()``
-method.
+.. doctest::
+
+  >>> called
+  {'handler1': (1, 'a'), 'handler2': (1, 'a')}
+
+
+As you can see, to have a function or method called when a signal is *fired*
+you just have to call the `~core.Signal.connect`:meth: method of the signal
+instance. To remove that same method you can use the
+`~core.Signal.disconnect`:meth: method.
 
 As you can see above, the way to fire an event is by calling the
-``notify()`` method and any argument or keyword argument passed to
-that function will be added to the handlers call.
+`~core.Signal.notify`:meth: method and any argument or keyword argument passed
+to that function will be passed on each handler execution.
+
+A `~core.Signal`:class: has its ``__call__()`` method defined as an alias to
+its `~core.Signal.notify`:meth: method so it can also be called as:
+
+.. doctest::
+
+  >>> result = asignal(2, kw='b')
+  >>> called
+  {'handler1': (2, 'b'), 'handler2': (2, 'b')}
+
+
+When a notification is executed, the return values from the handlers are
+collected and are available inside `~core.Signal.notify`:meth:'s return value,
+which is always an instance of the utility class
+`~utils.MultipleResults`:class:.
+
+.. doctest::
+
+  >>> type(result)
+  <class 'metapensiero.signal.utils.MultipleResults'>
+  >>> result.results
+  ('result1', 'result2')
+
+
+The signal keeps a weak reference to each handler so you don't have to worry
+about dangling references:
+
+.. doctest::
+
+  >>> len(asignal.subscribers)
+  2
 
 It's possible to remove all the connected handlers by invoking the
-``clear()`` method.
+`~core.Signal.clear`:meth:  method.
+
+.. doctest::
+
+  >>> asignal.clear()
+  >>> len(asignal.subscribers)
+  0
 
 Asynchronous signal handlers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,50 +118,100 @@ Asynchronous signal handlers
 Not only you can have synchronous handlers, but you can have
 asynchronous handlers as well:
 
-.. code:: python
+.. testcode:: async
 
   import asyncio
   from metapensiero.signal import Signal
 
-  async def test_with_mixed_handlers():
-      signal = Signal()
-      called1 = False
-      called2 = False
-      h1 = asyncio.Event()
+  called = {
+   'handler1': False,
+   'handler2': False
+  }
 
-      async def handler1(arg, kw):
-          nonlocal called1
-          called1 = (arg, kw)
-          h1.set()
+  asignal = Signal()
 
-      def handler2(arg, kw):
-          nonlocal called2
-          called2 = (arg, kw)
+  async def handler1(arg, kw):
+      called['handler1'] = (arg, kw)
+      return 'result1'
 
-      signal.connect(handler1)
-      signal.connect(handler2)
+  def handler2(arg, kw):
+      called['handler2'] = (arg, kw)
+      return 'result2'
 
-      signal.notify(1, kw='a')
-      assert called2 == (1, 'a')
-      assert called1 == False
-      yield from h1.wait()
-      assert called1 == (1, 'a')
+  asignal.connect(handler1)
+  asignal.connect(handler2)
 
-  loop = asyncio.get_event_loop()
-  loop.run_until_complete(test_with_mixed_handlers())
+  result = asignal.notify(1, kw='a')
 
-As you can see in this example the var ``called2`` immediately after
-the notify has the expected value but the value of the var ``called1``
-hasn't. To have it the code has to suspend itself and wait for the
-flag event to be set. This is because ``handler1()`` is scheduled to
-be executed with ``asyncio.ensure_future()`` but it isn't waited for a
-result by the ``notify()`` method.
+What will be the result this time? As you may immagine, at this point
+``called`` variable is:
 
-The usage of a flag to synchronize is a bit silly, what if we have
-more than one async handler? Do we have to create an ``asyncio.Event``
-instance for all of them and then wait for everyone of those? And if
-the actual amount of async handlers isn't known in advance, what
-should we do?
+.. doctest:: async
+
+  >>> called
+  {'handler1': False, 'handler2': (1, 'a')}
+
+This is because ``handler1()`` which is a coroutine function doesn't execute
+immediately, but instead it returns a coroutine which needs to be driven by
+the event loop to be executed. How to understand if the results are ready or
+not when the presence of coroutines among the subscribers is unknown? The
+``result`` value (which is an instance of `~utils.MultipleResults`:class:) can
+help with that:
+
+.. doctest:: async
+
+  >>> print('done?', result.done)
+  done? False
+  >>> print('any result?', result.results)
+  any result? None
+  >>> print('any coroutine?', result.has_async)
+  any coroutine? True
+
+As you can see, even if one of the handlers is a normal callable, its result
+isn't available until all the handlers are executed. But to do that, we need a
+loop, and something to "pull" the asynchronous results!
+
+But we are lucky, as the ``result`` object is also an *awaitable* object:
+
+.. doctest:: async
+
+  >>> import inspect
+  >>> inspect.isawaitable(result)
+  True
+
+So we can just do:
+
+.. doctest:: async
+
+  >>> loop = asyncio.get_event_loop()
+  >>> awaited_result = loop.run_until_complete(result)
+
+Let's verify what we got:
+
+  >>> print('done?', result.done)
+  done? True
+  >>> print('any result?', result.results)
+  any result? ('result1', 'result2')
+  >>> print('any coroutine?', result.has_async)
+  any coroutine? False
+
+When *awaited*, the ``result`` object will return its ``results`` attribute so
+that you always can code notifications like:
+
+.. code:: python
+
+  # inside your coroutine...
+  result = await mysignal.notify(foo, bar)
+
+and you will not have to deal with `~.utils.MultipleResults`:class:, here
+``result`` will be always a simple tuple. Just to verify in out case:
+
+.. doctest:: async
+
+  >>> type(awaited_result)
+  <class 'tuple'>
+  >>> awaited_result is result.results
+  True
 
 Use signals with classes
 ~~~~~~~~~~~~~~~~~~~~~~~~
