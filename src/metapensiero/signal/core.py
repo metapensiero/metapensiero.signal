@@ -373,7 +373,7 @@ class Signal:
             if instance is None:
                 fnotify = self._fnotify
             else:
-                fnotify = types.MethodType(instance, self._fnotify)
+                fnotify = types.MethodType(self._fnotify, instance)
         validator = self._fvalidation
         if validator is not None and instance is not None:
             validator = types.MethodType(validator, instance)
