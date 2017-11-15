@@ -13,8 +13,4 @@
 .. toctree::
 
    intro
-   core
-   external
-   user
-   weak
-   utils
+   api
