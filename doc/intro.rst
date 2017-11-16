@@ -20,8 +20,8 @@ It can be used standalone or as member of a class.
 
 It supports Python 3.5+.
 
-Basic functionality
-~~~~~~~~~~~~~~~~~~~
+Standalone
+~~~~~~~~~~
 
 The most significant component provided by this package is the class
 `~core.Signal`:class: which is very simple to use. It has three main
@@ -213,15 +213,25 @@ and you will not have to deal with `~.utils.MultipleResults`:class:, here
   >>> awaited_result is result.results
   True
 
-Use signals with classes
-~~~~~~~~~~~~~~~~~~~~~~~~
+And finally, as it is expected:
 
-A ``Signal`` instance class can also be used as a member of a
-class. When this is the case a decorator is provided to declare
-class-level handlers. To let this feature work, the user class has to
-have a specific metaclass:
+.. doctest:: async
 
-.. code:: python
+  >>> called
+  {'handler1': (1, 'a'), 'handler2': (1, 'a')}
+
+
+
+Use with classes
+~~~~~~~~~~~~~~~~
+
+A `~core.Signal`:class: instance can also be used as a member of another
+class and when that class or one of its ancestors has
+`~user.SignalAndHandlerInitMeta`:class: as metaclass it's possible to have
+class-defined handlers by using the ``handler`` decorator that takes the name
+of a signal as its unique parameter:
+
+.. testcode:: class
 
   from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
 
@@ -236,20 +246,62 @@ have a specific metaclass:
       def onclick(self, arg, kw):
           self.called = (arg, kw)
 
-  a1 = A()
-  assert a1.called == False
-  a1.click.notify(1, kw='a')
-  assert a1.called == (1, 'a')
+.. doctest:: class
+  :options: +ELLIPSIS
+
+  >>> a = A()
+  >>> a.called
+  False
+  >>> a.click.notify(1, kw='a')
+  <metapensiero.signal.utils.MultipleResults ...>
+  >>> a.called
+  (1, 'a')
+
+As you can see, handlers are declare at class-definition time, but the handler
+receive ``a`` as ``self`` when the ``click.notify()`` is called on the
+instance. The use of an helper metaclass ensures also that when the name
+specified to ``handler`` doesn't match any signal name defined in the class or
+any of its ancestor, the class definition will result in an error:
+
+.. testcode:: class
+
+  def class_define_failure():
+
+      class Wrong(metaclass=SignalAndHandlerInitMeta):
+
+          @handler('click')
+          def onclick2(self):
+              pass
+
+      return Wrong
+
+  def class_define_pass():
+
+      class Right(A):
+
+          @handler('click')
+          def onclick2(self):
+              pass
+
+      return Right
+
+.. doctest:: class
+  :options: +ELLIPSIS
+
+  >>> class_define_pass()
+  <class 'Right'>
+  >>> class_define_failure()
+  Traceback (most recent call last):
+  ...
+  metapensiero.signal.utils.SignalError: Cannot find a signal named 'click'
 
 Of course a class-level handler can be async:
 
-.. code:: python
+.. testcode:: class
 
   import asyncio
 
-  from metapensiero.signal import Signal, SignalAndHandlerInitMeta, handler
-
-  class A(metaclass=SignalAndHandlerInitMeta):
+  class B(metaclass=SignalAndHandlerInitMeta):
 
       click = Signal()
 
@@ -265,32 +317,36 @@ Of course a class-level handler can be async:
       async def click2(self, arg, kw):
           self.called2 = (arg, kw)
 
-  a1 = A()
+  b = B()
 
+.. doctest:: class
 
-  async def runner():
-      assert a1.called == False
-      assert a1.called2 == False
+  >>> b.called
+  False
+  >>> b.called2
+  False
+  >>> result = b.click.notify(1, kw='a')
+  >>> b.called
+  (1, 'a')
+  >>> b.called2
+  False
+  >>> loop = asyncio.get_event_loop()
+  >>> loop.run_until_complete(result)
+  (None, None)
+  >>> b.called2
+  (1, 'a')
 
-      await a1.click.notify(1, kw='a')
-      assert a1.called == (1, 'a')
-      assert a1.called2 == False
-      assert a1.called2 == (1, 'a')
+You can use the ``Signal`` class without user class instrumentation, but you
+will have to do per-instance subscriptions by yourself, by connecting them in
+the ``__init__()`` body, like:
 
-  loop = asyncio.get_event_loop()
-  loop.run_until_complete(runner())
+.. testcode:: class
 
-Of course, you can use the ``Signal`` class without user class
-instrumentation, but you will have to do per-instance subscriptions by
-yourself:
-
-.. code:: python
-
-  class B:
+  class C:
 
       # the name here is needed for classes that don't explicitly support
       # signals
-      click = Signal('click')
+      click = Signal(name='click')
 
       def __init__(self):
           self.called = False
@@ -299,10 +355,16 @@ yourself:
       def onclick(self, arg, kw):
           self.called = (arg, kw)
 
-  b = B()
-  assert b.called == False
-  b.onclick.notify(1, kw='b')
-  assert b.called == (1, 'b')
+.. doctest:: class
+  :options: +ELLIPSIS
+
+  >>> c = C()
+  >>> c.called
+  False
+  >>> c.click.notify(1, kw='c')
+  <metapensiero.signal.utils.MultipleResults ...>
+  >>> c.called
+  (1, 'c')
 
 Extensibility
 ~~~~~~~~~~~~~
@@ -310,8 +372,8 @@ Extensibility
 Signals support two way to extend their functionality. The first is
 global and is intended as a way to plug in signals into other event
 systems. Please have a look at the code in ``external.py`` and the
-corrisponding tests to learn how to use those abstract classes, they
-give you a way to tap into signal's machinery do your stuff.
+corresponding tests to learn how to use those abstract classes, they
+give you a way to tap into signal's machinery to do your stuff.
 
 The second way is per-signal and allows you to define three functions
 to wrap around ``notify()``, ``connect()``, ``disconnect()`` and
