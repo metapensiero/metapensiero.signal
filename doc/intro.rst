@@ -8,20 +8,34 @@
 
 .. currentmodule:: metapensiero.signal
 
-Introduction
-============
 
-This package implements a light event system that is able to deal with
-both synchronous and asynchronous event handlers. It manages the asynchronous
-handlers using coroutines by default, with the possibility of handling them
-using futures.
+Installation and Getting Started
+===================================
 
-It can be used standalone or as member of a class.
+**Pythons**: Python 3.5,3.6
 
-It supports Python 3.5+.
+**PyPI package name**: `metapensiero.signal`__
 
-Standalone
-~~~~~~~~~~
+**dependencies**: `weakreflist`__
+
+
+__ http://pypi.python.org/pypi/metapensiero.signal
+
+__ http://pypi.python.org/pypi/weakreflist
+
+
+Installation
+~~~~~~~~~~~~
+
+To install the package execute the following command:
+
+.. code:: bash
+
+  $ pip install metapensiero.signal
+
+
+Usage
+~~~~~
 
 The most significant component provided by this package is the class
 `~core.Signal`:class: which is very simple to use. It has three main
@@ -219,8 +233,6 @@ And finally, as it is expected:
 
   >>> called
   {'handler1': (1, 'a'), 'handler2': (1, 'a')}
-
-
 
 Use with classes
 ~~~~~~~~~~~~~~~~
