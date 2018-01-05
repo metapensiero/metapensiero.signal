@@ -60,7 +60,7 @@ setup(
             'pytest',
             'pytest-asyncio',
             'pytest-cov',
-            'metapensiero.signal[doc]'
+            'sphinx',
         ]
     },
     setup_requires=['pytest-runner'],
