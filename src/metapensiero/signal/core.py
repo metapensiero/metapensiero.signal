@@ -23,7 +23,7 @@ from . import SignalAndHandlerInitMeta
 
 
 logger = logging.getLogger(__name__)
-SIGN_DOC_TEMPLATE="""
+SIGN_DOC_TEMPLATE = """
 
 :returns: an awaitable that will return the results from the handlers
 :rtype: an instance of `metapensiero.signal.utils.MultipleResults`:py:class:
@@ -115,8 +115,8 @@ class Signal:
     notification is done by executing e `notify`:meth: method.
 
     It can be used either as a standalone event or in the body of another class
-    which uses `~.user.SignalAndHandlerInitMeta`:class: metaclass, with the help
-    of the `~.utils.signal`:func: decorator.
+    which uses `~.user.SignalAndHandlerInitMeta`:class: metaclass, with the
+    help of the `~.utils.signal`:func: decorator.
 
     :param \*flags: any flags that can change the behavior of the signal
       instance, see `~.utils.SignalOptions`:class: class
@@ -221,7 +221,7 @@ class Signal:
     def _set_fvalidation(self, value):
         self._fvalidation = value
         if value is not None:
-            if value.__doc__ is  None:
+            if value.__doc__ is None:
                 doc = ''
                 indent = 0
             else:
