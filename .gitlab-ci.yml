@@ -1,0 +1,46 @@
+---
+stages:
+  - test
+  - various
+
+before_script:
+  - pip install .[test]
+
+test:3.5:
+  stage: test
+  image: python:3.5
+  script:
+    - cd doc; make doctest
+    - python setup.py test
+
+test:3.6:
+  stage: test
+  image: python:3.6
+  script:
+    - cd doc; make doctest
+    - python setup.py test
+  coverage: '/\d+\%\s*$/'
+
+wheel:
+  before_script:
+  stage: various
+  image: python:3.6
+  script:
+    - python setup.py bdist_wheel
+  artifacts:
+    paths:
+      - dist/*.whl
+
+pages:
+  stage: various
+  before_script:
+  image: python:3.6
+  script:
+    - pip install .[doc]
+    - cd doc; make html
+    - mv _build/html ../public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

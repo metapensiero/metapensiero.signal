@@ -3,8 +3,18 @@
 .. :Created:   dom 09 ago 2015 12:57:35 CEST
 .. :Author:    Alberto Berti <alberto@metapensiero.it>
 .. :License:   GNU General Public License version 3 or later
-.. :Copyright: Copyright (C) 2015 Alberto Berti
+.. :Copyright: Copyright © 2015, 2016, 2017, 2018 Alberto Berti
 ..
+
+.. image:: https://gitlab.com/metapensiero/metapensiero.signal/badges/master/pipeline.svg
+   :target: https://gitlab.com/metapensiero/metapensiero.signal/commits/master
+   :align: left
+   :alt: tests status
+
+.. image:: https://gitlab.com/metapensiero/metapensiero.signal/badges/master/coverage.svg
+   :target: https://gitlab.com/metapensiero/metapensiero.signal/commits/master
+   :align: left
+   :alt: tests coverage
 
 =====================
  metapensiero.signal
@@ -136,10 +146,3 @@ Testing
 To run the tests you should run the following at the package root::
 
   python setup.py test
-
-
-Build status
-------------
-
-.. image:: https://travis-ci.org/azazel75/metapensiero.signal.svg?branch=master
-    :target: https://travis-ci.org/azazel75/metapensiero.signal

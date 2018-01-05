@@ -53,9 +53,14 @@ setup(
         'dev': [
             'metapensiero.tool.bump_version',
         ],
+        'doc': [
+            'sphinx'
+        ],
         'test': [
             'pytest',
-            'pytest-asyncio'
+            'pytest-asyncio',
+            'pytest-cov',
+            'metapensiero.signal[doc]'
         ]
     },
     setup_requires=['pytest-runner'],
