@@ -3,7 +3,7 @@
 # :Created:   mer 16 dic 2015 12:30:10 CET
 # :Author:    Alberto Berti <alberto@metapensiero.it>
 # :License:   GNU General Public License version 3 or later
-# :Copyright: Copyright (C) 2015 Alberto Berti
+# :Copyright: © 2015, 2016, 2017, 2018 Alberto Berti
 #
 
 import inspect

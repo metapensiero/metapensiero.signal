@@ -3,7 +3,7 @@
 # :Created:   mer 16 dic 2015 12:28:23 CET
 # :Author:    Alberto Berti <alberto@metapensiero.it>
 # :License:   GNU General Public License version 3 or later
-# :Copyright: Copyright © 2015, 2016, 2017 Alberto Berti
+# :Copyright: Copyright © 2015, 2016, 2017, 2018 Alberto Berti
 #
 
 import asyncio
