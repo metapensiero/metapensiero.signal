@@ -16,35 +16,33 @@
    :align: left
    :alt: tests coverage
 
-=====================
- metapensiero.signal
-=====================
+=======================================================
+ metapensiero.signal: An asyncio aware event framework
+=======================================================
 
  :author: Alberto Berti
  :contact: alberto@metapensiero.it
  :license: GNU General Public License version 3 or later
 
-An asyncio aware event framework
-================================
-
-.. contents::
 
 Goal
-----
+====
 
 This package implements a light event system that is able to deal with both
 synchronous and asynchronous event handlers. It can be used standalone or as
 member of a class.
 
 Installation
-------------
+============
 
-To install the package execute the following command::
+To install the package execute the following command:
+
+.. code:: bash
 
   $ pip install metapensiero.signal
 
 Usage
------
+=====
 
 An example of usage as standalone object:
 
@@ -123,8 +121,9 @@ and an example of use as class member:
   (1, 'a')
 
 Features
---------
+========
 
+* handlers can return no value, one value, or multiple values;
 * **configurable execution** of **async** handlers: *sequential* or
   *concurrent*;
 * **connect handlers** in a simple way **by decorating methods** in class
@@ -141,7 +140,7 @@ Features
 Read the documentation to discover how to use these features.
 
 Testing
--------
+=======
 
 To run the tests you should run the following at the package root::
 
