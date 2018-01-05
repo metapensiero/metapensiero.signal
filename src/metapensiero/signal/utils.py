@@ -3,7 +3,7 @@
 # :Created:   sab 21 ott 2017 12:25:42 CEST
 # :Author:    Alberto Berti <alberto@metapensiero.it>
 # :License:   GNU General Public License version 3 or later
-# :Copyright: Copyright © 2015, 2016, 2017 Alberto Berti
+# :Copyright: Copyright © 2015, 2016, 2017, 2018 Alberto Berti
 #
 
 from collections.abc import Awaitable
