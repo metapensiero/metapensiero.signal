@@ -202,7 +202,7 @@ class Signal:
         for l in lines:
             match = re.match('^[ ]+', l)
             if match is not None:
-                return len(match[0])
+                return len(match.group(0))
         return 0
 
     def _loop_from_instance(self, instance):
