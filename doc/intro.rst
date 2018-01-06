@@ -92,9 +92,8 @@ its `~core.Signal.notify`:meth: method so it can also be called as:
 .. doctest::
 
   >>> result = asignal(2, kw='b')
-  >>> called
-  {'handler1': (2, 'b'), 'handler2': (2, 'b')}
-
+  >>> called == {'handler1': (2, 'b'), 'handler2': (2, 'b')}
+  True
 
 When a notification is executed, the return values from the handlers are
 collected and are available inside `~core.Signal.notify`:meth:'s return value,
@@ -231,8 +230,8 @@ And finally, as it is expected:
 
 .. doctest:: async
 
-  >>> called
-  {'handler1': (1, 'a'), 'handler2': (1, 'a')}
+  >>> called == {'handler1': (1, 'a'), 'handler2': (1, 'a')}
+  True
 
 Use with classes
 ~~~~~~~~~~~~~~~~
