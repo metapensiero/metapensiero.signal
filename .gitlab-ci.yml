@@ -10,14 +10,14 @@ test:3.5:
   stage: test
   image: python:3.5
   script:
-    - cd doc; make doctest
+    - cd doc; make doctest; cd ..
     - python setup.py test
 
 test:3.6:
   stage: test
   image: python:3.6
   script:
-    - cd doc; make doctest
+    - cd doc; make doctest; cd ..
     - python setup.py test
   coverage: '/\d+\%\s*$/'
 
