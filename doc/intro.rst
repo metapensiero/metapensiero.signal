@@ -9,8 +9,9 @@
 .. currentmodule:: metapensiero.signal
 
 
-Installation and Getting Started
-===================================
+=================
+ Getting Started
+=================
 
 **Pythons**: Python 3.5,3.6
 
@@ -38,8 +39,9 @@ Usage
 ~~~~~
 
 The most significant component provided by this package is the class
-`~core.Signal`:class: which is very simple to use. It has three main
-operations: *connect()*, *disconnect()* and  *notify()*.
+`~core.Signal`:class: which is very simple to use. It has three main operations:
+`~core.Signal.connect`:meth:, `~core.Signal.disconnect`:meth: and
+`~core.Signal.notify`:meth:.
 
 The first two are used to manage the subscriptions of handlers to the signal
 and the latter is used to actually execute all the handlers in the order that
@@ -73,8 +75,8 @@ caller. Let's see a simple example:
 
 .. doctest::
 
-  >>> called
-  {'handler1': (1, 'a'), 'handler2': (1, 'a')}
+  >>> called == {'handler1': (1, 'a'), 'handler2': (1, 'a')}
+  True
 
 
 As you can see, to have a function or method called when a signal is *fired*
@@ -161,8 +163,8 @@ What will be the result this time? As you may immagine, at this point
 
 .. doctest:: async
 
-  >>> called
-  {'handler1': False, 'handler2': (1, 'a')}
+  >>> called  == {'handler1': False, 'handler2': (1, 'a')}
+  True
 
 This is because ``handler1()`` which is a coroutine function doesn't execute
 immediately, but instead it returns a coroutine which needs to be driven by
