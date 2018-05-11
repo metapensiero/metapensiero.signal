@@ -44,7 +44,6 @@ setup(
     packages=['metapensiero.' + pkg
               for pkg in find_packages('src/metapensiero')],
     package_dir={'': 'src'},
-    namespace_packages=['metapensiero'],
     install_requires=[
         'setuptools>=36.7.2',
         'weakreflist>=0.4',
